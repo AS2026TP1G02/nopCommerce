@@ -72,6 +72,14 @@ public class SettingMigration : MigrationBase
         //#8069
         this.SetSettingIfNotExists<CatalogSettings, bool>(settings => settings.ShowSearchTermHistory, true);
         this.SetSettingIfNotExists<CatalogSettings, int>(settings => settings.NumberOfSearchTermHistoryItems, 10);
+
+        //#2430
+        this.SetSettingIfNotExists<OtpSettings, bool>(settings => settings.LoginByPhoneEnabled, false);
+        this.SetSettingIfNotExists<OtpSettings, int>(settings => settings.OtpTimeLife, 30);
+        this.SetSettingIfNotExists<OtpSettings, int>(settings => settings.OtpCountAttemptsToSendCode, 3);
+        this.SetSettingIfNotExists<OtpSettings, int>(settings => settings.OtpTimeToRepeat, 15);
+        this.SetSettingIfNotExists<OtpSettings, int>(settings => settings.OtpLength, 6);
+        this.SetSettingIfNotExists<OtpSettings, string>(settings => settings.ActiveSmsProviderSystemName, "Sms.Twilio");
     }
 
     public override void Down()

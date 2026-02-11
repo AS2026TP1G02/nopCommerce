@@ -420,6 +420,7 @@ public partial class BaseNopTest
         services.AddTransient<IPickupPluginManager, PickupPluginManager>();
         services.AddTransient<IShippingPluginManager, ShippingPluginManager>();
         services.AddTransient<ITaxPluginManager, TaxPluginManager>();
+        services.AddTransient<ISmsPluginManager, SmsPluginManager>();
         services.AddScoped<ISearchPluginManager, SearchPluginManager>();
 
         //picture thumb service

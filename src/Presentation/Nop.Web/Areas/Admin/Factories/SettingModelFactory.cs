@@ -1154,6 +1154,7 @@ public partial class SettingModelFactory : ISettingModelFactory
 
         //fill in model values from the entity
         model ??= catalogSettings.ToSettingsModel<CatalogSettingsModel>();
+        model.PriceListStrategyValues = await catalogSettings.PriceListStrategy.ToSelectListAsync();
 
         //fill in additional values (not existing in the entity)
         model.ActiveStoreScopeConfiguration = storeId;
@@ -1266,6 +1267,7 @@ public partial class SettingModelFactory : ISettingModelFactory
             model.AllowCustomersToSearchWithCategoryName_OverrideForStore = await _settingService.SettingExistsAsync(catalogSettings, x => x.AllowCustomersToSearchWithCategoryName, storeId);
             model.DisplayAllPicturesOnCatalogPages_OverrideForStore = await _settingService.SettingExistsAsync(catalogSettings, x => x.DisplayAllPicturesOnCatalogPages, storeId);
             model.ProductUrlStructureTypeId_OverrideForStore = await _settingService.SettingExistsAsync(catalogSettings, x => x.ProductUrlStructureTypeId, storeId);
+            model.PriceListStrategy_OverrideForStore = await _settingService.SettingExistsAsync(catalogSettings, x => x.PriceListStrategy, storeId);
         }
 
         //prepare nested search model

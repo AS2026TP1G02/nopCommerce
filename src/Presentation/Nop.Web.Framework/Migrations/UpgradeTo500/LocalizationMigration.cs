@@ -444,7 +444,7 @@ public class LocalizationMigration : MigrationBase
 
             //#7989
             ["Products.ProductHasBeenUpdatedInTheWishlist.Link"] = "The product has been updated in your <a href=\"{0}\">wishlist</a>",
-            
+
             //#8021
             ["Admin.Catalog.Products.RelatedProducts.CyclicallyRelated"] = "Circular dependency is not allowed for required products (e.g. product A requires product B. And product B requires product A)",
 
@@ -508,6 +508,70 @@ public class LocalizationMigration : MigrationBase
 			//#8117
 			["Admin.Configuration.AppSettings.Data.CloseDataContextAfterUse"] = "Close dataContext after use",
             ["Admin.Configuration.AppSettings.Data.CloseDataContextAfterUse.Hint"] = "Check to automatically dispose the data context after each operation, which helps prevent resource leaks. Uncheck if you need to keep the data context open for multiple sequential operations.",
+
+            //#8098
+            ["Admin.Catalog.PriceLists.Fields.Name"] = "Name",
+            ["Admin.Catalog.PriceLists.Fields.Name.Hint"] = "The name of the price list.",
+            ["Admin.Catalog.PriceLists.Fields.Description"] = "Description",
+            ["Admin.Catalog.PriceLists.Fields.Description.Hint"] = "The description of the price list.",
+            ["Admin.Catalog.PriceLists.Fields.Active"] = "Active",
+            ["Admin.Catalog.PriceLists.Fields.Active.Hint"] = "Check to make the price list active. Inactive price lists won't be applied to products.",
+            ["Admin.Catalog.PriceLists.Fields.StartDateUtc"] = "Start date",
+            ["Admin.Catalog.PriceLists.Fields.StartDateUtc.Hint"] = "The date and time when the price list becomes active. Leave empty to activate immediately.",
+            ["Admin.Catalog.PriceLists.Fields.EndDateUtc"] = "End date",
+            ["Admin.Catalog.PriceLists.Fields.EndDateUtc.Hint"] = "The date and time when the price list expires. Leave empty to make it active indefinitely.",
+            ["Admin.Catalog.PriceLists.Fields.PriceCalculationTypeId"] = "Price calculation type",
+            ["Admin.Catalog.PriceLists.Fields.PriceCalculationTypeId.Hint"] = "Select the price calculation type for this price list.",
+            ["Admin.Catalog.PriceLists.Fields.PriceCalculationValue"] = "Price calculation value",
+            ["Admin.Catalog.PriceLists.Fields.PriceCalculationValue.Hint"] = "Specify the price calculation value. Its meaning depends on the selected price calculation type. For example, if you select 'Percentage Increase' as the price calculation type, enter the percentage discount to be applied to product prices (e.g. enter '10' to apply a 10% discount).",
+            ["Admin.Catalog.PriceLists.Fields.Priority"] = "Priority",
+            ["Admin.Catalog.PriceLists.Fields.Priority.Hint"] = "The priority of the price list. This field is used to determine the order in which price lists are applied to products. Price lists with higher priority values are applied after price lists with lower priority values. If two or more price lists have the same priority, they are applied in the order they were created.",
+            ["Admin.Catalog.PriceLists.List.CustomerRoles"] = "Customer roles",
+            ["Admin.Catalog.PriceLists.List.CustomerRoles.Hint"] = "Filter price lists by customer role. Only price lists that are applied to the selected customer role will be displayed in the list.",
+            ["Admin.Catalog.PriceLists.Fields.CustomerRoles"] = "Customer roles",
+            ["Admin.Catalog.PriceLists.Fields.CustomerRoles.Hint"] = "Select customer roles to which this price list will be applied. If no customer role is selected, the price list will be applied to all customers.",
+            ["Admin.Catalog.PriceLists.List.SearchIsActive"] = "Active",
+            ["Admin.Catalog.PriceLists.List.SearchIsActive.Hint"] = "Filter price lists by their active status. Leave empty to display all price lists.",
+
+            ["Admin.Catalog.PriceLists"] = "Price lists",
+            ["Admin.Catalog.PriceLists.AddNew"] = "Add new price list",
+            ["Admin.Catalog.PriceLists.ImportFromExcelTip"] = "Imported price lists are distinguished by ID. If the ID already exists, then its corresponding price list will be updated. You should not specify ID (leave 0) for new price lists.",
+            ["Admin.Documentation.Reference.PriceLists"] = "Learn more about <a target=\"_blank\" href=\"{0}\">price lists</a>",
+            ["Admin.Catalog.PriceLists.NoPriceLists"] = "No price lists selected",
+            ["Admin.Catalog.PriceLists.AddNew"] = "Add new price list",
+            ["Admin.Catalog.PriceLists.EditPriceListDetails"] = "Edit price list",
+            ["Admin.Catalog.PriceLists.BackToList"] = "back to price lists",
+            ["Admin.Catalog.PriceLists.Imported"] = "Price lists have been imported successfully.",
+
+            ["Admin.Catalog.PriceList.Info"] = "Price list info",
+            ["Admin.Catalog.PriceList.Products"] = "Products",
+            ["Admin.Catalog.PriceList.Customers"] = "Customers",
+            ["Admin.Catalog.PriceList.Products.SaveBeforeEdit"] = "You need to save the price list before you can add products for this page.",
+            ["Admin.Catalog.PriceList.Customers.SaveBeforeEdit"] = "You need to save the price list before you can add customers for this page.",
+            ["Admin.Catalog.PriceList.Products.Fields.Product"] = "Product",
+            ["Admin.Catalog.PriceList.Products.Fields.StandardPrice"] = "Original price",
+            ["Admin.Catalog.PriceList.Products.Fields.CalculatedPrice"] = "Calculated price",
+            ["Admin.Catalog.PriceList.Products.Fields.ManualPrice"] = "Manual price",
+
+            ["Admin.Catalog.PriceList.Customers.Fields.Customer"] = "Customer",
+            ["Admin.Catalog.PriceList.Products.AddNew"] = "Add product",
+            ["Admin.Catalog.PriceList.Customers.AddNew"] = "Add customer",
+
+            ["Admin.Catalog.PriceLists.Added"] = "The price list has been added successfully.",
+            ["Admin.Catalog.PriceLists.Updated"] = "The price list has been updated successfully.",
+            ["Admin.Catalog.PriceLists.Deleted"] = "The price list has been deleted successfully.",
+
+            ["ActivityLog.AddNewPriceList"] = "Added a new price list. ID: {0}",
+            ["ActivityLog.EditPriceList"] = "Edited a price list. ID: {0}",
+            ["ActivityLog.DeletePriceList"] = "Deleted a price list. ID: {0}",
+
+            ["Admin.Configuration.Settings.Catalog.PriceListStrategy"] = "Price list strategy",
+            ["Admin.Configuration.Settings.Catalog.PriceListStrategy.Hint"] = "Select the strategy to be used when applying multiple price lists to products. The 'Minimal price' strategy applies all active price lists to products and uses the lowest calculated price. The 'Use by priority' strategy applies price lists to products in the order determined by their priority and uses the price from the first applicable price list.",
+            ["Enums.Nop.Core.Domain.PriceLists.PriceListStrategy.MinimalPrice"] = "Minimal price",
+            ["Enums.Nop.Core.Domain.PriceLists.PriceListStrategy.UseByPriority"] = "Use by priority",
+            ["ActivityLog.ExportPriceLists"] = "{0} price lists were exported",
+            ["ActivityLog.ImportPriceLists"] = "{0} price lists were imported",
+            ["Admin.PriceLists.Import.ProductsDontExist"] = "Products with the following SKUs don't exist: {0}",
         });
 
         #endregion

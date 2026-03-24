@@ -23,6 +23,7 @@ using Nop.Core.Domain.Menus;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
+using Nop.Core.Domain.PriceLists;
 using Nop.Core.Domain.ScheduleTasks;
 using Nop.Core.Domain.Security;
 using Nop.Core.Domain.Seo;
@@ -1376,6 +1377,7 @@ public partial class InstallationService
 
         await SaveSettingAsync(dictionary, new CatalogSettings
         {
+            PriceListStrategy = PriceListStrategy.MinimalPrice,
             AllowViewUnpublishedProductPage = true,
             DisplayDiscontinuedMessageForUnpublishedProducts = true,
             PublishBackProductWhenCancellingOrders = false,
@@ -2489,6 +2491,11 @@ public partial class InstallationService
                     Name = "Add a new measure weight"
                 },
                 new() {
+                    SystemKeyword = "AddNewPriceList",
+                    Enabled = true,
+                    Name = "Add a new price list"
+                },
+                new() {
                     SystemKeyword = "AddNewProduct",
                     Enabled = true,
                     Name = "Add a new product"
@@ -2702,6 +2709,11 @@ public partial class InstallationService
                     SystemKeyword = "DeletePlugin",
                     Enabled = true,
                     Name = "Delete a plugin"
+                },
+                new() {
+                    SystemKeyword = "DeletePriceList",
+                    Enabled = true,
+                    Name = "Delete a price list"
                 },
                 new() {
                     SystemKeyword = "DeleteProduct",
@@ -2929,6 +2941,11 @@ public partial class InstallationService
                     Name = "Edit a plugin"
                 },
                 new() {
+                    SystemKeyword = "EditPriceList",
+                    Enabled = true,
+                    Name = "Edit a price list"
+                },
+                new() {
                     SystemKeyword = "EditProduct",
                     Enabled = true,
                     Name = "Edit a product"
@@ -3059,6 +3076,11 @@ public partial class InstallationService
                     Name = "Manufacturers were imported"
                 },
                 new() {
+                    SystemKeyword = "ImportPriceLists",
+                    Enabled = true,
+                    Name = "Import price lists"
+                },
+                new() {
                     SystemKeyword = "ImportProducts",
                     Enabled = true,
                     Name = "Products were imported"
@@ -3097,6 +3119,11 @@ public partial class InstallationService
                     SystemKeyword = "ExportManufacturers",
                     Enabled = true,
                     Name = "Manufacturers were exported"
+                },
+                new() {
+                    SystemKeyword = "ExportPriceLists",
+                    Enabled = true,
+                    Name = "Price lists were exported"
                 },
                 new() {
                     SystemKeyword = "ExportProducts",

@@ -39,6 +39,7 @@ using Nop.Services.Orders;
 using Nop.Services.Payments;
 using Nop.Services.Plugins;
 using Nop.Services.Plugins.Marketplace;
+using Nop.Services.PriceLists;
 using Nop.Services.ScheduleTasks;
 using Nop.Services.Security;
 using Nop.Services.Seo;
@@ -200,6 +201,7 @@ public partial class NopStartup : INopStartup
         services.AddScoped<IRewardPointService, RewardPointService>();
         services.AddScoped<IShoppingCartService, ShoppingCartService>();
         services.AddScoped<ICustomWishlistService, CustomWishlistService>();
+        services.AddScoped<IPriceListService, PriceListService>();
         services.AddScoped<ICustomNumberFormatter, CustomNumberFormatter>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IEncryptionService, EncryptionService>();
@@ -300,12 +302,12 @@ public partial class NopStartup : INopStartup
         //event consumers
         var consumers = typeFinder.FindClassesOfType(typeof(IConsumer<>)).ToList();
         foreach (var consumer in consumers)
-        foreach (var findInterface in consumer.FindInterfaces((type, criteria) =>
-                 {
-                     var isMatch = type.IsGenericType && ((Type)criteria).IsAssignableFrom(type.GetGenericTypeDefinition());
-                     return isMatch;
-                 }, typeof(IConsumer<>)))
-            services.AddScoped(findInterface, consumer);
+            foreach (var findInterface in consumer.FindInterfaces((type, criteria) =>
+                     {
+                         var isMatch = type.IsGenericType && ((Type)criteria).IsAssignableFrom(type.GetGenericTypeDefinition());
+                         return isMatch;
+                     }, typeof(IConsumer<>)))
+                services.AddScoped(findInterface, consumer);
 
         //admin menu
         services.AddScoped<IAdminMenu, AdminMenu>();

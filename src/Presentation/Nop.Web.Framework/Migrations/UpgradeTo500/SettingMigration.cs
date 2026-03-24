@@ -4,6 +4,7 @@ using Nop.Core.Domain.ArtificialIntelligence;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
+using Nop.Core.Domain.PriceLists;
 using Nop.Core.Domain.Shipping;
 using Nop.Data;
 using Nop.Data.Migrations;
@@ -68,6 +69,9 @@ public class SettingMigration : MigrationBase
         this.SetSettingIfNotExists<StoreInformationSettings, string>(settings => settings.SnapchatLink, string.Empty);
         this.SetSettingIfNotExists<StoreInformationSettings, string>(settings => settings.PinterestLink, string.Empty);
         this.SetSettingIfNotExists<StoreInformationSettings, string>(settings => settings.TumblrLink, string.Empty);
+
+        //#8098
+        this.SetSettingIfNotExists<CatalogSettings, PriceListStrategy>(settings => settings.PriceListStrategy, PriceListStrategy.MinimalPrice);
     }
 
     public override void Down()

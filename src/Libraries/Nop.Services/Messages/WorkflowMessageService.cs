@@ -2433,12 +2433,18 @@ public partial class WorkflowMessageService : IWorkflowMessageService
     /// <param name="senderName">Sender name</param>
     /// <param name="subject">Email subject. Pass null if you want a message template subject to be used.</param>
     /// <param name="body">Email body</param>
+    /// <param name="customAttribures">Custom attributes</param>
     /// <returns>
     /// A task that represents the asynchronous operation
     /// The task result contains the queued email identifier
     /// </returns>
-    public virtual async Task<IList<int>> SendContactUsMessageAsync(int languageId, string senderEmail,
-        string senderName, string subject, string body)
+    public virtual async Task<IList<int>> SendContactUsMessageAsync(
+        int languageId, 
+        string senderEmail,
+        string senderName,
+        string subject,
+        string body,
+        IDictionary<string, string> customAttribures)
     {
         var store = await _storeContext.GetCurrentStoreAsync();
         languageId = await EnsureLanguageIsActiveAsync(languageId, store.Id);
@@ -2448,36 +2454,30 @@ public partial class WorkflowMessageService : IWorkflowMessageService
             return new List<int>();
 
         //tokens
-        var commonTokens = new List<Token>
-        {
-            new("ContactUs.SenderEmail", senderEmail),
-            new("ContactUs.SenderName", senderName)
-        };
+        var commonTokens = new List<Token>();
+        var fromEmail = senderEmail;
+        var fromName = senderName;
+
+        if (_commonSettings.UseSystemEmailForContactUsForm)
+            body = $"<strong>From</strong>: {WebUtility.HtmlEncode(senderName)} - {WebUtility.HtmlEncode(senderEmail)}<br />{body}";
+
+        await _messageTokenProvider.AddContactFormTokensAsync(commonTokens, senderEmail, senderName, body, customAttribures);
 
         return await messageTemplates.SelectAwait(async messageTemplate =>
         {
             //email account
             var emailAccount = await GetEmailAccountOfMessageTemplateAsync(messageTemplate, languageId);
 
-            var tokens = new List<Token>(commonTokens);
-            await _messageTokenProvider.AddStoreTokensAsync(tokens, store, emailAccount, languageId);
-
-            string fromEmail;
-            string fromName;
             //required for some SMTP servers
             if (_commonSettings.UseSystemEmailForContactUsForm)
             {
                 fromEmail = emailAccount.Email;
                 fromName = emailAccount.DisplayName;
-                body = $"<strong>From</strong>: {WebUtility.HtmlEncode(senderName)} - {WebUtility.HtmlEncode(senderEmail)}<br /><br />{body}";
-            }
-            else
-            {
-                fromEmail = senderEmail;
-                fromName = senderName;
             }
 
-            tokens.Add(new Token("ContactUs.Body", body, true));
+            var tokens = new List<Token>(commonTokens);
+
+            await _messageTokenProvider.AddStoreTokensAsync(tokens, store, emailAccount, languageId);
 
             //event notification
             await _eventPublisher.MessageTokensAddedAsync(messageTemplate, tokens);

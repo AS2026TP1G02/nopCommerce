@@ -723,6 +723,12 @@
   <LocaleResource Name="ActivityLog.AddNewCheckoutAttribute">
     <Value>Added a new checkout attribute ('{0}')</Value>
   </LocaleResource>
+  <LocaleResource Name="ActivityLog.AddNewContactFormAttribute">
+    <Value>Added a new contact form attribute (ID = {0})</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.AddNewContactFormAttributeValue">
+    <Value>Added a new contact form attribute value (ID = {0})</Value>
+  </LocaleResource>
   <LocaleResource Name="ActivityLog.AddNewCountry">
     <Value>Added a new country (ID = {0})</Value>
   </LocaleResource>
@@ -839,6 +845,12 @@
   </LocaleResource>
   <LocaleResource Name="ActivityLog.DeleteCheckoutAttribute">
     <Value>Deleted a checkout attribute ('{0}')</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.DeleteContactFormAttribute">
+    <Value>Deleted a contact form attribute (ID = {0})</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.DeleteContactFormAttributeValue">
+    <Value>Deleted a contact form attribute value (ID = {0})</Value>
   </LocaleResource>
   <LocaleResource Name="ActivityLog.DeleteCountry">
     <Value>Deleted a country (ID = {0})</Value>
@@ -974,6 +986,12 @@
   </LocaleResource>
   <LocaleResource Name="ActivityLog.EditCheckoutAttribute">
     <Value>Edited a checkout attribute ('{0}')</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.EditContactFormAttribute">
+    <Value>Edited a contact form attribute (ID = {0})</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.EditContactFormAttributeValue">
+    <Value>Edited a contact form attribute value (ID = {0})</Value>
   </LocaleResource>
   <LocaleResource Name="ActivityLog.EditCountry">
     <Value>Edited a country (ID = {0})</Value>
@@ -4563,6 +4581,87 @@
   <LocaleResource Name="Admin.Common.ConfigurationNotRequired">
     <Value>Configuration is not required</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes">
+    <Value>Custom contact form attributes</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Added">
+    <Value>The new attribute has been added successfully.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.AddNew">
+    <Value>Add a new contact form attribute</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.BackToList">
+    <Value>back to settings</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Deleted">
+    <Value>The attribute has been deleted successfully.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Description">
+    <Value>If the default form fields are not enough for your needs, then you can manage additional contact form attributes below.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.EditAttributeDetails">
+    <Value>Edit contact form attribute details</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.AttributeControlType">
+    <Value>Control type</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.AttributeControlType.Hint">
+    <Value>Choose how to display your attribute values.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.DisplayOrder">
+    <Value>DisplayOrder</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.DisplayOrder.Hint">
+    <Value>The contact form attribute display order. 1 represents the first item in the list.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.IsRequired">
+    <Value>Required</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.IsRequired.Hint">
+    <Value>When an attribute is required, the customer must choose an appropriate attribute value before they can send form.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.Name">
+    <Value>Name</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.Name.Hint">
+    <Value>The name of the contact form attribute.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Info">
+    <Value>Attribute info</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values">
+    <Value>Attribute values</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.AddNew">
+    <Value>Add a new attribute value</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.EditValueDetails">
+    <Value>Edit contact form value details</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.Name">
+    <Value>Name</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.Name.Hint">
+    <Value>The name of the contact form attribute.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.DisplayOrder">
+    <Value>Display order</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.DisplayOrder.Hint">
+    <Value>The display order of the attribute value. 1 represents the first item in attribute value list.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.IsPreSelected">
+    <Value>Pre-selected</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.IsPreSelected.Hint">
+    <Value>Determines whether this attribute value is pre-selected.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.SaveBeforeEdit">
+    <Value>You need to save the contact form attribute before you can add values for this contact form attribute page.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Updated">
+    <Value>The attribute has been updated successfully.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Common.CsvFile">
     <Value>CSV file</Value>
   </LocaleResource>
@@ -7649,6 +7748,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.GeneralCommon.BlockTitle.Common">
     <Value>Common</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.GeneralCommon.BlockTitle.ContactForm">
+    <Value>Contact form</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.GeneralCommon.BlockTitle.CustomHtml">
     <Value>Custom HTML</Value>

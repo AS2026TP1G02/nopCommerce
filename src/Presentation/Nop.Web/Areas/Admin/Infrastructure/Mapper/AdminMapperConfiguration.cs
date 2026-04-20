@@ -767,6 +767,15 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
         CreateMap<Setting, SettingModel>()
             .ForMember(setting => setting.AvailableStores, options => options.Ignore())
             .ForMember(setting => setting.Store, options => options.Ignore());
+
+        CreateMap<ContactFormAttribute, ContactFormAttributeModel>()
+            .ForMember(model => model.AttributeControlTypeName, options => options.Ignore())
+            .ForMember(model => model.ContactFormAttributeValueSearchModel, options => options.Ignore());
+        CreateMap<ContactFormAttributeModel, ContactFormAttribute>()
+            .ForMember(entity => entity.AttributeControlType, options => options.Ignore());
+
+        CreateMap<ContactFormAttributeValue, ContactFormAttributeValueModel>();
+        CreateMap<ContactFormAttributeValueModel, ContactFormAttributeValue>();
     }
 
     /// <summary>

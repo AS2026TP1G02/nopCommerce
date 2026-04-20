@@ -15,6 +15,17 @@ namespace Nop.Services.Messages;
 public partial interface IMessageTokenProvider
 {
     /// <summary>
+    /// Add contact form tokens
+    /// </summary>
+    /// <param name="tokens">List of already added tokens</param>
+    /// <param name="senderEmail">Sender email</param>
+    /// <param name="senderName">Sender name</param>
+    /// <param name="body">Email body</param>
+    /// <param name="customAttribures">Custom attributes</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttribures);
+
+    /// <summary>
     /// Add store tokens
     /// </summary>
     /// <param name="tokens">List of already added tokens</param>

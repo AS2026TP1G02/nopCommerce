@@ -967,6 +967,33 @@ public partial class MessageTokenProvider : IMessageTokenProvider
     #region Methods
 
     /// <summary>
+    /// Add contact form tokens
+    /// </summary>
+    /// <param name="tokens">List of already added tokens</param>
+    /// <param name="senderEmail">Sender email</param>
+    /// <param name="senderName">Sender name</param>
+    /// <param name="body">Email body</param>
+    /// <param name="customAttribures">Custom attributes</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttribures)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(body);
+
+        tokens.Add(new Token("ContactUs.SenderEmail", senderEmail));
+        tokens.Add(new Token("ContactUs.SenderName", senderName));
+        tokens.Add(new Token("ContactUs.Body", body, true));
+
+        if (customAttribures is not null)
+        {
+            var fieldsHtml = new StringBuilder();
+            foreach (var (name, value) in customAttribures)
+                fieldsHtml.AppendLine($"<p><strong>{name}</strong>: {value}</p>");
+
+            tokens.Add(new Token("ContactUs.CustomFields", fieldsHtml, true));
+        }
+    }
+
+    /// <summary>
     /// Add store tokens
     /// </summary>
     /// <param name="tokens">List of already added tokens</param>
@@ -1064,7 +1091,7 @@ public partial class MessageTokenProvider : IMessageTokenProvider
         var paymentMethodName = paymentMethod != null ? await _localizationService.GetLocalizedFriendlyNameAsync(paymentMethod, languageId) : order.PaymentMethodSystemName;
         tokens.Add(new Token("Order.PaymentMethod", paymentMethodName));
         tokens.Add(new Token("Order.VatNumber", order.VatNumber));
-        
+
         var customValues = new CustomValues();
         customValues.FillByXml(order.CustomValuesXml, true);
 
@@ -1280,7 +1307,7 @@ public partial class MessageTokenProvider : IMessageTokenProvider
         var passwordRecoveryUrl = await RouteUrlAsync(routeName: NopRouteNames.Standard.PASSWORD_RECOVERY_CONFIRM, routeValues: new { token = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.PasswordRecoveryTokenAttribute), guid = customer.CustomerGuid });
         var accountActivationUrl = await RouteUrlAsync(routeName: NopRouteNames.Standard.ACCOUNT_ACTIVATION, routeValues: new { token = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.AccountActivationTokenAttribute), guid = customer.CustomerGuid });
         var emailRevalidationUrl = await RouteUrlAsync(routeName: NopRouteNames.Standard.EMAIL_REVALIDATION, routeValues: new { token = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.EmailRevalidationTokenAttribute), guid = customer.CustomerGuid });
-        
+
         tokens.Add(new Token("Customer.PasswordRecoveryURL", passwordRecoveryUrl, true));
         tokens.Add(new Token("Customer.AccountActivationURL", accountActivationUrl, true));
         tokens.Add(new Token("Customer.EmailRevalidationURL", emailRevalidationUrl, true));
@@ -1526,7 +1553,7 @@ public partial class MessageTokenProvider : IMessageTokenProvider
             MessageTemplateSystemNames.ORDER_COMPLETED_STORE_OWNER_NOTIFICATION or
             MessageTemplateSystemNames.ORDER_CANCELLED_VENDOR_NOTIFICATION or
             MessageTemplateSystemNames.ORDER_CANCELLED_CUSTOMER_NOTIFICATION or
-            MessageTemplateSystemNames.ORDER_CANCELLED_STORE_OWNER_NOTIFICATION=> [TokenGroupNames.StoreTokens, TokenGroupNames.OrderTokens, TokenGroupNames.CustomerTokens],
+            MessageTemplateSystemNames.ORDER_CANCELLED_STORE_OWNER_NOTIFICATION => [TokenGroupNames.StoreTokens, TokenGroupNames.OrderTokens, TokenGroupNames.CustomerTokens],
 
             MessageTemplateSystemNames.SHIPMENT_SENT_CUSTOMER_NOTIFICATION or
             MessageTemplateSystemNames.SHIPMENT_READY_FOR_PICKUP_CUSTOMER_NOTIFICATION or

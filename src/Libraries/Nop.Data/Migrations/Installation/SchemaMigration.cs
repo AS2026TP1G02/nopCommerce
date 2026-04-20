@@ -159,5 +159,7 @@ public class SchemaMigration : ForwardOnlyMigration
         this.CreateTableIfNotExists<VendorNote>();
         this.CreateTableIfNotExists<Menu>();
         this.CreateTableIfNotExists<MenuItem>();
+        this.CreateTableIfNotExists<ContactFormAttribute>();
+        this.CreateTableIfNotExists<ContactFormAttributeValue>();
     }
 }

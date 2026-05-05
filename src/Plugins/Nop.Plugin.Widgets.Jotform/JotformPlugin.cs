@@ -1,46 +1,38 @@
 ﻿using Nop.Core.Domain.Cms;
-using Nop.Core.Infrastructure;
 using Nop.Plugin.Widgets.Jotform.Components;
 using Nop.Services.Cms;
 using Nop.Services.Configuration;
-using Nop.Services.Helpers;
 using Nop.Services.Localization;
-using Nop.Services.Media;
 using Nop.Services.Plugins;
 using Nop.Web.Framework.Infrastructure;
+using Nop.Web.Framework.Mvc.Routing;
 
 namespace Nop.Plugin.Widgets.Jotform;
 
 /// <summary>
-/// Represents swiper widget
+/// Represents Jotform widget
 /// </summary>
 public class JotformPlugin : BasePlugin, IWidgetPlugin
 {
     #region Fields
 
-    protected readonly ILocalizationService _localizationService;
-    protected readonly INopFileProvider _fileProvider;
-    protected readonly IPictureService _pictureService;
-    protected readonly ISettingService _settingService;
-    protected readonly IWebHelper _webHelper;
-    protected readonly WidgetSettings _widgetSettings;
+    private readonly ILocalizationService _localizationService;
+    private readonly INopUrlHelper _nopUrlHelper;
+    private readonly ISettingService _settingService;
+    private readonly WidgetSettings _widgetSettings;
 
     #endregion
 
     #region Ctor
 
     public JotformPlugin(ILocalizationService localizationService,
-        INopFileProvider fileProvider,
-        IPictureService pictureService,
+        INopUrlHelper nopUrlHelper,
         ISettingService settingService,
-        IWebHelper webHelper,
         WidgetSettings widgetSettings)
     {
         _localizationService = localizationService;
-        _fileProvider = fileProvider;
-        _pictureService = pictureService;
+        _nopUrlHelper = nopUrlHelper;
         _settingService = settingService;
-        _webHelper = webHelper;
         _widgetSettings = widgetSettings;
     }
 
@@ -65,7 +57,7 @@ public class JotformPlugin : BasePlugin, IWidgetPlugin
     /// </summary>
     public override string GetConfigurationPageUrl()
     {
-        return $"{_webHelper.GetStoreLocation()}Admin/Jotform/Configure";
+        return _nopUrlHelper.RouteUrl(JotformDefaults.ConfigurationRouteName);
     }
 
     /// <summary>
@@ -84,26 +76,25 @@ public class JotformPlugin : BasePlugin, IWidgetPlugin
     /// <returns>A task that represents the asynchronous operation</returns>
     public override async Task InstallAsync()
     {
-        //settings
         await _settingService.SaveSettingAsync(new JotformSettings
         {
             Enabled = false,
             EmbedCode = string.Empty
         });
 
-        if (!_widgetSettings.ActiveWidgetSystemNames.Contains(PluginDescriptor.SystemName))
+        if (!_widgetSettings.ActiveWidgetSystemNames.Contains(JotformDefaults.SystemName))
         {
-            _widgetSettings.ActiveWidgetSystemNames.Add(PluginDescriptor.SystemName);
+            _widgetSettings.ActiveWidgetSystemNames.Add(JotformDefaults.SystemName);
             await _settingService.SaveSettingAsync(_widgetSettings);
         }
 
         await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
         {
             ["Plugins.Widgets.Jotform.Enabled"] = "Enabled",
-            ["Plugins.Widgets.Jotform.Enabled.Hint"] = "Check to enable Jotform AI chat boot functionality",
+            ["Plugins.Widgets.Jotform.Enabled.Hint"] = "Check to enable Jotform AI chatbot functionality",
             ["Plugins.Widgets.Jotform.EmbedCode"] = "Embed code",
             ["Plugins.Widgets.Jotform.EmbedCode.Hint"] = "Add your Jotform embed code here. You can get it from your Jotform account, on the publish tab of the chatbot settings.",
-            ["Plugins.Widgets.Jotform.ScriptRequired"] = "Jotform script is required",
+            ["Plugins.Widgets.Jotform.EmbedCode.Required"] = "Jotform script is required",
             ["Plugins.Widgets.Jotform.Description"] = "<div>" +
                 "<p>AI Agents are powerful customer service tools that provide real-time assistance, answer user queries, and guide customers through processes like form-filling and troubleshooting.</p>" +
                 "<p>By offering personalized, conversational interactions and 24-7 availability, they enhance customer satisfaction, streamline support workflows, and reduce response times, ensuring a seamless and efficient customer experience.</p>" +
@@ -121,16 +112,14 @@ public class JotformPlugin : BasePlugin, IWidgetPlugin
     /// <returns>A task that represents the asynchronous operation</returns>
     public override async Task UninstallAsync()
     {
-        //settings
         await _settingService.DeleteSettingAsync<JotformSettings>();
 
-        if (_widgetSettings.ActiveWidgetSystemNames.Contains(PluginDescriptor.SystemName))
+        if (_widgetSettings.ActiveWidgetSystemNames.Contains(JotformDefaults.SystemName))
         {
-            _widgetSettings.ActiveWidgetSystemNames.Remove(PluginDescriptor.SystemName);
+            _widgetSettings.ActiveWidgetSystemNames.Remove(JotformDefaults.SystemName);
             await _settingService.SaveSettingAsync(_widgetSettings);
         }
 
-        //locales
         await _localizationService.DeleteLocaleResourcesAsync("Plugins.Widgets.Jotform");
 
         await base.UninstallAsync();

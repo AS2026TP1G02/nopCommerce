@@ -6,7 +6,7 @@ using Nop.Web.Framework.Validators;
 namespace Nop.Plugin.Widgets.Jotform.Validators;
 
 /// <summary>
-/// Represents slide model validator
+/// Represents configuration model validator
 /// </summary>
 public class ConfigurationValidator : BaseNopValidator<ConfigurationModel>
 {
@@ -17,7 +17,7 @@ public class ConfigurationValidator : BaseNopValidator<ConfigurationModel>
         RuleFor(model => model.EmbedCode)
             .NotEmpty()
             .When(model => model.Enabled)
-            .WithMessageAwait(localizationService.GetResourceAsync("Plugins.Widgets.Jotform.ScriptRequired"));
+            .WithMessageAwait(localizationService.GetResourceAsync("Plugins.Widgets.Jotform.EmbedCode.Required"));
     }
 
     #endregion

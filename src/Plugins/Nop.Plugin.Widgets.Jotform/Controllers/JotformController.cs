@@ -42,7 +42,7 @@ public class JotformController : BasePluginController
 
     #region Methods
 
-    [CheckPermission(StandardPermission.Configuration.MANAGE_PLUGINS)]
+    [CheckPermission(StandardPermission.Configuration.MANAGE_WIDGETS)]
     public async Task<IActionResult> Configure()
     {
         //load settings for a chosen store scope
@@ -55,20 +55,17 @@ public class JotformController : BasePluginController
             EmbedCode = jotformSettings.EmbedCode
         };
 
-        if (store <= 0)
-            return View("~/Plugins/Widgets.Jotform/Views/Configure.cshtml", model);
-
-        model.EmbedCode_OverrideForStore = await _settingService.SettingExistsAsync(jotformSettings,
-            x => x.Enabled, store);
-        model.EmbedCode_OverrideForStore = await _settingService.SettingExistsAsync(jotformSettings,
-            x => x.EmbedCode, store);
+        if (store > 0)
+        {
+            model.Enabled_OverrideForStore = await _settingService.SettingExistsAsync(jotformSettings, x => x.Enabled, store);
+            model.EmbedCode_OverrideForStore = await _settingService.SettingExistsAsync(jotformSettings, x => x.EmbedCode, store);
+        }
 
         return View("~/Plugins/Widgets.Jotform/Views/Configure.cshtml", model);
     }
 
-    [HttpPost, ActionName("Configure")]
-    [FormValueRequired("save")]
-    [CheckPermission(StandardPermission.Configuration.MANAGE_PLUGINS)]
+    [HttpPost]
+    [CheckPermission(StandardPermission.Configuration.MANAGE_WIDGETS)]
     public async Task<IActionResult> Configure(ConfigurationModel model)
     {
         if (!ModelState.IsValid)

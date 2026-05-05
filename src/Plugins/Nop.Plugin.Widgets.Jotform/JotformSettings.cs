@@ -15,7 +15,7 @@ public class JotformSettings : ISettings
     public string EmbedCode { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the Jotform AI chat boot is enabled
+    /// Gets or sets a value indicating whether the Jotform AI chatbot is enabled
     /// </summary>
     public bool Enabled { get; set; }
 

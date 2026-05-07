@@ -134,6 +134,7 @@ public partial class DefaultPermissionConfigManager : IPermissionConfigManager
         new ("Admin area. External Authentication Methods. Manage", StandardPermission.Configuration.MANAGE_EXTERNAL_AUTHENTICATION_METHODS, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Multi-factor Authentication Methods. Manage", StandardPermission.Configuration.MANAGE_MULTIFACTOR_AUTHENTICATION_METHODS, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Tax Settings. Manage", StandardPermission.Configuration.MANAGE_TAX_SETTINGS, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
+        new ("Admin area. SMS Settings. Manage", StandardPermission.Configuration.MANAGE_SMS_SETTINGS, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Shipping Settings. Manage", StandardPermission.Configuration.MANAGE_SHIPPING_SETTINGS, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Currencies. Manage", StandardPermission.Configuration.MANAGE_CURRENCIES, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. ACL. Manage", StandardPermission.Configuration.MANAGE_ACL, nameof(StandardPermission.Configuration), NopCustomerDefaults.AdministratorsRoleName),

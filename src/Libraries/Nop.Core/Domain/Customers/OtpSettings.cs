@@ -32,10 +32,4 @@ public partial class OtpSettings : ISettings
     /// Gets or sets the number of digits to use when generating one-time passwords (OTPs)
     /// </summary>
     public int OtpLength { get; set; }
-
-    /// <summary>
-    /// Gets or sets system name of active sms provider
-    /// </summary>
-    public string ActiveSmsProviderSystemName { get; set; }
-
 }

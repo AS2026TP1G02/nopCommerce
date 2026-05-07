@@ -3,8 +3,6 @@
 @{
     Layout = "_ConfigurePlugin";
     NopHtml.SetActiveMenuItemSystemName("Sms providers");
-
-     var signUpUrl = $"https://www.twilio.com/try-twilio";
 }
 
 <form asp-controller="Twilio" asp-action="Configure" method="post" id="configuration-form">
@@ -18,7 +16,7 @@
                      <p>
                         To enable this plugin, you'll need to:
                         <ol>
-                          <li><a href="@signUpUrl" target="_blank">Sign up for Twilio</a>.</li>
+                          <li><a href="@TwilioDefaults.SignUpUrl" target="_blank">Sign up for Twilio</a>.</li>
                           <li>To get a phone that has SMS capabilities, do either of the following:</li>
                             <ul>
                               <li>In the <b>Account Dashboard</b>, click <b>Get a phone number</b></li>

@@ -39,6 +39,7 @@ using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Mvc.Filters;
 using Nop.Web.Framework.Validators;
 using Nop.Web.Models.Customer;
+using PhoneNumbers;
 using ILogger = Nop.Services.Logging.ILogger;
 
 namespace Nop.Web.Controllers;
@@ -202,6 +203,15 @@ public partial class CustomerController : BasePublicController
 
     #region Utilities
 
+    protected virtual string FormatPhoneNumber(string phone)
+    {
+        var phoneNumberUtil = PhoneNumberUtil.GetInstance();
+        var regionCode = phoneNumberUtil.GetRegionCodeForNumber(phoneNumberUtil.Parse(phone, null));
+
+        var phoneNumber = phoneNumberUtil.Parse(phone, regionCode);
+        return phoneNumberUtil.Format(phoneNumber, PhoneNumberFormat.E164);
+    }
+
     protected virtual void ValidateRequiredConsents(List<GdprConsent> consents, IFormCollection form)
     {
         foreach (var consent in consents)
@@ -228,7 +238,7 @@ public partial class CustomerController : BasePublicController
         var customer = await _workContext.GetCurrentCustomerAsync();
         var multiFactorAuthenticationProviders = await _multiFactorAuthenticationPluginManager
             .LoadActivePluginsAsync(customer, store.Id);
-        
+
         var isValidProvider = multiFactorAuthenticationProviders
             .Any(p => p.PluginDescriptor.SystemName.Equals(selectedProvider, StringComparison.InvariantCultureIgnoreCase));
 
@@ -248,27 +258,11 @@ public partial class CustomerController : BasePublicController
             {
                 case AttributeControlType.DropdownList:
                 case AttributeControlType.RadioList:
-                {
-                    var ctrlAttributes = form[controlId];
-                    if (!StringValues.IsNullOrEmpty(ctrlAttributes))
                     {
-                        var selectedAttributeId = int.Parse(ctrlAttributes);
-                        if (selectedAttributeId > 0)
+                        var ctrlAttributes = form[controlId];
+                        if (!StringValues.IsNullOrEmpty(ctrlAttributes))
                         {
-                            attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
-                                attribute, selectedAttributeId.ToString());
-                        }
-                    }
-                }
-                    break;
-                case AttributeControlType.Checkboxes:
-                {
-                    var cblAttributes = form[controlId];
-                    if (!StringValues.IsNullOrEmpty(cblAttributes))
-                    {
-                        foreach (var item in cblAttributes.ToString().Split(_separator, StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            var selectedAttributeId = int.Parse(item);
+                            var selectedAttributeId = int.Parse(ctrlAttributes);
                             if (selectedAttributeId > 0)
                             {
                                 attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
@@ -276,33 +270,49 @@ public partial class CustomerController : BasePublicController
                             }
                         }
                     }
-                }
+                    break;
+                case AttributeControlType.Checkboxes:
+                    {
+                        var cblAttributes = form[controlId];
+                        if (!StringValues.IsNullOrEmpty(cblAttributes))
+                        {
+                            foreach (var item in cblAttributes.ToString().Split(_separator, StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                var selectedAttributeId = int.Parse(item);
+                                if (selectedAttributeId > 0)
+                                {
+                                    attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
+                                        attribute, selectedAttributeId.ToString());
+                                }
+                            }
+                        }
+                    }
                     break;
                 case AttributeControlType.ReadonlyCheckboxes:
-                {
-                    //load read-only (already server-side selected) values
-                    var attributeValues = await _customerAttributeService.GetAttributeValuesAsync(attribute.Id);
-                    foreach (var selectedAttributeId in attributeValues
-                                 .Where(v => v.IsPreSelected)
-                                 .Select(v => v.Id)
-                                 .ToList())
                     {
-                        attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
-                            attribute, selectedAttributeId.ToString());
+                        //load read-only (already server-side selected) values
+                        var attributeValues = await _customerAttributeService.GetAttributeValuesAsync(attribute.Id);
+                        foreach (var selectedAttributeId in attributeValues
+                                     .Where(v => v.IsPreSelected)
+                                     .Select(v => v.Id)
+                                     .ToList())
+                        {
+                            attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
+                                attribute, selectedAttributeId.ToString());
+                        }
                     }
-                }
                     break;
                 case AttributeControlType.TextBox:
                 case AttributeControlType.MultilineTextbox:
-                {
-                    var ctrlAttributes = form[controlId];
-                    if (!StringValues.IsNullOrEmpty(ctrlAttributes))
                     {
-                        var enteredText = ctrlAttributes.ToString().Trim();
-                        attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
-                            attribute, enteredText);
+                        var ctrlAttributes = form[controlId];
+                        if (!StringValues.IsNullOrEmpty(ctrlAttributes))
+                        {
+                            var enteredText = ctrlAttributes.ToString().Trim();
+                            attributesXml = _customerAttributeParser.AddAttribute(attributesXml,
+                                attribute, enteredText);
+                        }
                     }
-                }
                     break;
                 case AttributeControlType.Datepicker:
                 case AttributeControlType.ColorSquares:
@@ -446,11 +456,12 @@ public partial class CustomerController : BasePublicController
         if (_captchaSettings.Enabled && _captchaSettings.ShowOnLoginPage && !captchaValid)
             ModelState.AddModelError("", await _localizationService.GetResourceAsync("Common.WrongCaptchaMessage"));
 
-        if (ModelState.ErrorCount == 0 && _otpSettings.LoginByPhoneEnabled && model.LoginByPhoneEnabled)
-            return RedirectToRoute(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.Login, returnUrl, model.Phone });
-
         if (ModelState.IsValid)
         {
+            //login by phone (sms)
+            if (_otpSettings.LoginByPhoneEnabled && model.LoginByPhoneEnabled)
+                return RedirectToRoute(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.Login, returnUrl, model.Phone });
+
             var customerUserName = model.Username;
             var customerEmail = model.Email;
             var userNameOrEmail = _customerSettings.UsernamesEnabled ? customerUserName : customerEmail;
@@ -459,26 +470,26 @@ public partial class CustomerController : BasePublicController
             switch (loginResult)
             {
                 case CustomerLoginResults.Successful:
-                {
-                    var customer = _customerSettings.UsernamesEnabled
-                        ? await _customerService.GetCustomerByUsernameAsync(customerUserName)
-                        : await _customerService.GetCustomerByEmailAsync(customerEmail);
-
-                    return await _customerRegistrationService.SignInCustomerAsync(customer, returnUrl, model.RememberMe);
-                }
-                case CustomerLoginResults.MultiFactorAuthenticationRequired:
-                {
-                    var customerMultiFactorAuthenticationInfo = new CustomerMultiFactorAuthenticationInfo
                     {
-                        UserName = userNameOrEmail,
-                        RememberMe = model.RememberMe,
-                        ReturnUrl = returnUrl
-                    };
-                    await HttpContext.Session.SetAsync(
-                        NopCustomerDefaults.CustomerMultiFactorAuthenticationInfo,
-                        customerMultiFactorAuthenticationInfo);
-                    return RedirectToRoute(NopRouteNames.Standard.MULTIFACTOR_VERIFICATION);
-                }
+                        var customer = _customerSettings.UsernamesEnabled
+                            ? await _customerService.GetCustomerByUsernameAsync(customerUserName)
+                            : await _customerService.GetCustomerByEmailAsync(customerEmail);
+
+                        return await _customerRegistrationService.SignInCustomerAsync(customer, returnUrl, model.RememberMe);
+                    }
+                case CustomerLoginResults.MultiFactorAuthenticationRequired:
+                    {
+                        var customerMultiFactorAuthenticationInfo = new CustomerMultiFactorAuthenticationInfo
+                        {
+                            UserName = userNameOrEmail,
+                            RememberMe = model.RememberMe,
+                            ReturnUrl = returnUrl
+                        };
+                        await HttpContext.Session.SetAsync(
+                            NopCustomerDefaults.CustomerMultiFactorAuthenticationInfo,
+                            customerMultiFactorAuthenticationInfo);
+                        return RedirectToRoute(NopRouteNames.Standard.MULTIFACTOR_VERIFICATION);
+                    }
                 case CustomerLoginResults.Deleted:
                     ModelState.AddModelError("", await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.Deleted"));
                     break;
@@ -520,14 +531,14 @@ public partial class CustomerController : BasePublicController
         // Check if phone login is enabled
         if (!_otpSettings.LoginByPhoneEnabled)
         {
-            return Json(new { success = false, message = "Phone login is not enabled." });
+            return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.Phone.NotEnabled") });
         }
 
         phone = phone?.Trim();
         if (string.IsNullOrEmpty(phone))
         {
             return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.Phone.Required") });
-        }        
+        }
 
         // Validate phone number
         if (!PhoneNumberPropertyValidator<LoginModel, string>.IsValid(phone, _customerSettings))
@@ -539,8 +550,8 @@ public partial class CustomerController : BasePublicController
         var customer = await _customerService.GetCustomerByPhoneAsync(phone);
         if (customer == null)
         {
-            return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.Phone.NotRegistered") });
-        }        
+            return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials") });
+        }
 
         // Retrieve existing OTP context
         var jsonOtpContext = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.OtpContextAttribute);
@@ -553,7 +564,7 @@ public partial class CustomerController : BasePublicController
             DateTime.UtcNow > context.LastAttemptAtUtc.Value.AddMinutes(_otpSettings.OtpTimeToRepeat))
         {
             context.SentCount = 0;
-            context.Code = null; 
+            context.Code = null;
         }
 
         // Check if the number of attempts has been exceeded
@@ -582,18 +593,19 @@ public partial class CustomerController : BasePublicController
         context.SentCount++;
         context.LastAttemptAtUtc = DateTime.UtcNow;
 
+        // Send SMS with OTP code using SMS service
+        var isSentSms = await _smsService.SendSmsAsync(phone, string.Format(await _localizationService.GetResourceAsync("PhoneVerification.OtpCode.Message"), otpCode));
+        if (!isSentSms)
+            return Json(new { success = false, message = await _localizationService.GetResourceAsync("PhoneVerification.OtpCode.Error.SendError") });
+
         await _genericAttributeService.SaveAttributeAsync(customer, NopCustomerDefaults.OtpContextAttribute, JsonConvert.SerializeObject(context));
 
-        // Send SMS with OTP code using SMS service
-        await _smsService.SendSmsAsync(phone, string.Format(await _localizationService.GetResourceAsync("PhoneVerification.OtpCode.Message"), otpCode));
-
         // Return remaining time in seconds
-        return Json(new 
-        { 
-            success = true, 
+        return Json(new
+        {
+            success = true,
             remainingSeconds = _otpSettings.OtpTimeLife,
             attemptsLeft = _otpSettings.OtpCountAttemptsToSendCode - context.SentCount,
-            phoneInfo = otpCode, //TODO: only for testing
             message = "OTP sent successfully"
         });
     }
@@ -614,7 +626,7 @@ public partial class CustomerController : BasePublicController
         var customer = await _customerService.GetCustomerByPhoneAsync(phone);
         if (customer == null)
         {
-            return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.CustomerNotExist") });
+            return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials") });
         }
 
         var jsonContext = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.OtpContextAttribute);
@@ -641,7 +653,7 @@ public partial class CustomerController : BasePublicController
 
         if (operationType == (int)PhoneVerificationFlowEnum.Login)
         {
-            var loginResult = await _customerRegistrationService.ValidateCustomerByPhoneAsync(phone, otpCode);
+            var loginResult = await _customerRegistrationService.ValidateCustomerByPhoneAsync(phone);
             switch (loginResult)
             {
                 case CustomerLoginResults.Successful:
@@ -650,13 +662,12 @@ public partial class CustomerController : BasePublicController
                         break;
                     }
                 case CustomerLoginResults.CustomerNotExist:
-                    return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.CustomerNotExist") });
+                case CustomerLoginResults.NotRegistered:
+                    return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials") });
                 case CustomerLoginResults.Deleted:
                     return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.Deleted") });
                 case CustomerLoginResults.NotActive:
                     return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.NotActive") });
-                case CustomerLoginResults.NotRegistered:
-                    return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.NotRegistered") });
                 case CustomerLoginResults.LockedOut:
                     return Json(new { success = false, message = await _localizationService.GetResourceAsync("Account.Login.WrongCredentials.LockedOut") });
                 default:
@@ -667,9 +678,13 @@ public partial class CustomerController : BasePublicController
                     });
             }
         }
+        else
+        {
+            await _genericAttributeService.SaveAttributeAsync(customer, NopCustomerDefaults.OtpContextAttribute, (string)null);
 
-        customer.PhoneSmsVerified = true;
-        await _customerService.UpdateCustomerAsync(customer);
+            customer.PhoneSmsVerified = true;
+            await _customerService.UpdateCustomerAsync(customer);
+        }
 
         return Json(new
         {
@@ -979,7 +994,7 @@ public partial class CustomerController : BasePublicController
             ModelState.AddModelError("", await _localizationService.GetResourceAsync("Common.WrongCaptchaMessage"));
 
         //check is verified phone number
-        var phoneNumber = model.Phone;
+        var phoneNumber = FormatPhoneNumber(model.Phone);
         if (_otpSettings.LoginByPhoneEnabled && !string.IsNullOrEmpty(phoneNumber))
         {
             if (await _customerService.IsAlreadyExistsVerifiedPhoneNumberAsync(customer, phoneNumber))
@@ -1055,7 +1070,7 @@ public partial class CustomerController : BasePublicController
                 if (_customerSettings.CountryEnabled && _customerSettings.StateProvinceEnabled)
                     customer.StateProvinceId = model.StateProvinceId;
                 if (_customerSettings.PhoneEnabled)
-                    customer.Phone = model.Phone;
+                    customer.Phone = phoneNumber;
                 if (_customerSettings.FaxEnabled)
                     customer.Fax = model.Fax;
 
@@ -1220,7 +1235,7 @@ public partial class CustomerController : BasePublicController
 
                         if (_otpSettings.LoginByPhoneEnabled)
                             return RedirectToRoute(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.RegisterEmailValidation, returnUrl });
-                        else 
+                        else
                             return RedirectToRoute(NopRouteNames.Standard.REGISTER_RESULT, new { resultId = (int)UserRegistrationType.EmailValidation, returnUrl });
 
                     case UserRegistrationType.AdminApproval:
@@ -1237,7 +1252,7 @@ public partial class CustomerController : BasePublicController
                         await _eventPublisher.PublishAsync(new CustomerActivatedEvent(customer));
 
                         if (_otpSettings.LoginByPhoneEnabled)
-                            returnUrl = Url.RouteUrl(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.RegisterStandard, returnUrl});
+                            returnUrl = Url.RouteUrl(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.RegisterStandard, returnUrl });
                         else
                             returnUrl = Url.RouteUrl(NopRouteNames.Standard.REGISTER_RESULT, new { resultId = (int)UserRegistrationType.Standard, returnUrl });
 
@@ -1291,7 +1306,7 @@ public partial class CustomerController : BasePublicController
         }
 
         var model = await _customerModelFactory.PreparePhoneVerificationModelAsync(typeId, returnUrl);
-        
+
         if (!string.IsNullOrEmpty(phone))
             model.Phone = phone;
         return View(model);
@@ -1430,7 +1445,7 @@ public partial class CustomerController : BasePublicController
         }
 
         //check is verified phone number
-        var phoneNumber = model.Phone;
+        var phoneNumber = FormatPhoneNumber(model.Phone);
         if (_otpSettings.LoginByPhoneEnabled && !string.IsNullOrEmpty(phoneNumber))
         {
             if (await _customerService.IsAlreadyExistsVerifiedPhoneNumberAsync(customer, phoneNumber))
@@ -1529,12 +1544,12 @@ public partial class CustomerController : BasePublicController
                 {
                     if (_otpSettings.LoginByPhoneEnabled)
                     {
-                        isPhoneChanged = customer.Phone != model.Phone;
+                        isPhoneChanged = customer.Phone != phoneNumber;
                         customer.PhoneSmsVerified = customer.PhoneSmsVerified && !isPhoneChanged;
                     }
-                    customer.Phone = model.Phone;
-                }    
-                    
+                    customer.Phone = phoneNumber;
+                }
+
                 if (_customerSettings.FaxEnabled)
                     customer.Fax = model.Fax;
 
@@ -1604,7 +1619,7 @@ public partial class CustomerController : BasePublicController
                 {
                     return RedirectToRoute(NopRouteNames.Standard.OTP_PHONE_VERIFICATION, new { typeId = (int)PhoneVerificationFlowEnum.ChangePhoneNumber });
                 }
-                
+
                 return RedirectToRoute(NopRouteNames.General.CUSTOMER_INFO);
             }
         }

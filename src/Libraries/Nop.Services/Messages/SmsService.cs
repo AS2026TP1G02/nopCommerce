@@ -1,6 +1,4 @@
 ﻿using Nop.Core;
-using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Directory;
 
 namespace Nop.Services.Messages;
 
@@ -16,7 +14,7 @@ public partial class SmsService : ISmsService
 
     #region Ctor
 
-    public SmsService(ISmsPluginManager smsPluginManager, 
+    public SmsService(ISmsPluginManager smsPluginManager,
         IStoreContext storeContext,
         IWorkContext workContext)
     {
@@ -44,7 +42,9 @@ public partial class SmsService : ISmsService
         var customer = await _workContext.GetCurrentCustomerAsync();
 
         var smsProvider = await _smsPluginManager.LoadPrimaryPluginAsync(customer, store.Id);
-        
+        if (smsProvider is null)
+            return false;
+
         return await smsProvider.SendSmsAsync(phoneNumber, text);
     }
 

@@ -805,7 +805,7 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
 
         CreateMap<MultiFactorAuthenticationSettings, MultiFactorAuthenticationSettingsModel>();
         CreateMap<MultiFactorAuthenticationSettingsModel, MultiFactorAuthenticationSettings>()
-            .ForMember(settings => settings.ActiveAuthenticationMethodSystemNames, option => option.Ignore());        
+            .ForMember(settings => settings.ActiveAuthenticationMethodSystemNames, option => option.Ignore());
 
         CreateMap<PrivateMessageSettings, PrivateMessageSettingsModel>()
             .ForMember(model => model.AllowPrivateMessages_OverrideForStore, options => options.Ignore())
@@ -1583,8 +1583,7 @@ public partial class AdminMapperConfiguration : Profile, IOrderedMapperProfile
             .ForMember(model => model.IsPrimaryProvider, options => options.Ignore());
 
         CreateMap<OtpSettings, OtpSettingsModel>();
-        CreateMap<OtpSettingsModel, OtpSettings>()
-            .ForMember(settings => settings.ActiveSmsProviderSystemName, options => options.Ignore());
+        CreateMap<OtpSettingsModel, OtpSettings>();
     }
 
     /// <summary>

@@ -9,8 +9,8 @@
     switch (Model.VerificationFlow)
     {
         case PhoneVerificationFlowEnum.ChangePhoneNumber:
-            formTitle = "PageTitle.ChengePhone";
-            pageTitle = "PageTitle.ChengePhone";
+            formTitle = "PageTitle.ChangePhone";
+            pageTitle = "PageTitle.ChangePhone";
             pageBodyText = "Account.OtpPhoneVerification.OtpUpdatePhoneSmsText";
             break;
         case PhoneVerificationFlowEnum.RegisterStandard:
@@ -55,9 +55,6 @@
                 </div>
                 <div class="timer-container" data-mode="timer">
                     <div class="timer-text">@T("PhoneVerification.OtpCodeExpires"): <span id="otpTimer">0</span>s</div>
-                    <div class="phone-info">
-                        <span id="phoneInfo">-</span>
-                    </div>
                     <button type="button" id="confirmOtpBtn" class="button-1 confirm-otp-btn">@T("Common.Confirm")</button>
                 </div>
             </div>
@@ -77,16 +74,14 @@
         const otpContainer = $("[data-mode='otp-input']");
         const timerContainer = $("[data-mode='timer']");
         const otpTimer = $("#otpTimer");
-        const phoneInfo = $("#phoneInfo");
         const phoneInput = $("#@Html.IdFor(m => m.Phone)");
         const otpInput = $("#@Html.IdFor(m => m.OtpCode)");
         const sendSmsBtn = $("#sendSmsBtn");
         const confirmOtpBtn = $("#confirmOtpBtn");
         let timerInterval = null;
 
-        function startTimer(seconds, phoneText) {
+        function startTimer(seconds) {
             otpTimer.text(seconds);
-            phoneInfo.text(phoneText);
             timerContainer.show();
             otpContainer.show();
             sendSmsBtn.hide();
@@ -121,15 +116,15 @@
                 dataType: 'json',
                 success: function(result) {
                     if (result.success && result.remainingSeconds) {
-                        startTimer(result.remainingSeconds, result.phoneInfo);
+                        startTimer(result.remainingSeconds);
                         otpInput.focus();
                     } else {
-                        alert(result.message || "@T("PhoneVerification.OtpCode.Error.SendError")");
+                        displayBarNotification(result.message || "@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
                         $btn.prop("disabled", false);
                     }
                 },
                 error: function() {
-                    alert("@T("PhoneVerification.OtpCode.Error.SendError")");
+                    displayBarNotification("@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
                     $btn.prop("disabled", false);
                 }
             });
@@ -142,7 +137,7 @@
             const otpCode = otpInput.val();
 
             if (!phone || !otpCode) {
-                alert("@T("PhoneVerification.OtpCode.Required")");
+                displayBarNotification("@T("PhoneVerification.OtpCode.Required")", 'warning');
                 return;
             }
 
@@ -164,7 +159,7 @@
                     if (result.success) {
                         window.location.href = '@Model.ReturnUrl';
                     } else {
-                        alert(result.message || "@T("PhoneVerification.OtpCode.Error.Verification")");
+                        displayBarNotification(result.message || "@T("PhoneVerification.OtpCode.Error.Verification")", 'error');
                         otpInput.val("").prop("disabled", false).focus();
                     }
                 },
@@ -174,7 +169,7 @@
                         var response = JSON.parse(xhr.responseText);
                         if (response.message) message = response.message;
                     } catch { }
-                    alert(message);
+                    displayBarNotification(message, 'error');
                     otpInput.val("").prop("disabled", false).focus();
                 }
             });

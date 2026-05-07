@@ -1,5 +1,4 @@
-﻿using Nop.Core;
-using Nop.Plugin.Sms.Twilio.Services;
+﻿using Nop.Plugin.Sms.Twilio.Services;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
@@ -18,7 +17,6 @@ public class TwilioProvider : BasePlugin, ISmsProvider
     protected readonly ILocalizationService _localizationService;
     protected readonly INopUrlHelper _nopUrlHelper;
     protected readonly ISettingService _settingService;
-    protected readonly IStoreContext _storeContext;
     protected readonly TwilioService _twilioService;
 
     #endregion
@@ -28,13 +26,11 @@ public class TwilioProvider : BasePlugin, ISmsProvider
     public TwilioProvider(ILocalizationService localizationService,
         INopUrlHelper nopUrlHelper,
         ISettingService settingService,
-        IStoreContext storeContext,
         TwilioService twilioService)
     {
         _localizationService = localizationService;
         _nopUrlHelper = nopUrlHelper;
         _settingService = settingService;
-        _storeContext = storeContext;
         _twilioService = twilioService;
     }
 
@@ -46,7 +42,7 @@ public class TwilioProvider : BasePlugin, ISmsProvider
     /// Gets a configuration page URL
     /// </summary>
     public override string GetConfigurationPageUrl()
-    {        
+    {
         return _nopUrlHelper.RouteUrl(TwilioDefaults.ConfigurationRouteName);
     }
 
@@ -72,7 +68,7 @@ public class TwilioProvider : BasePlugin, ISmsProvider
     {
         //settings
         await _settingService.SaveSettingAsync(new TwilioSettings());
-        
+
         //locales
         await _localizationService.AddOrUpdateLocaleResourceAsync(new Dictionary<string, string>
         {
@@ -88,7 +84,7 @@ public class TwilioProvider : BasePlugin, ISmsProvider
             ["Plugins.Sms.Twilio.Credentials.Fields.BalanceInfo.Hint"] = "Check an Account Balance",
             ["Plugins.Sms.Twilio.Credentials.Fields.BalanceInfo.Text"] = "Update to check balance.",
             ["Plugins.Sms.Twilio.Credentials.CheckBalance"] = "Check balance",
-            
+
         });
 
         await base.InstallAsync();

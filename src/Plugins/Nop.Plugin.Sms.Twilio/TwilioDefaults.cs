@@ -14,4 +14,9 @@ public class TwilioDefaults
     /// Gets the configuration route name
     /// </summary>
     public static string ConfigurationRouteName => "Plugin.Sms.Twilio.Configure";
+
+    /// <summary>
+    /// Gets the URL for the Twilio sign-up page
+    /// </summary>
+    public static string SignUpUrl => "https://www.twilio.com/try-twilio";
 }

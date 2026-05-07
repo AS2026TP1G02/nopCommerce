@@ -2026,10 +2026,11 @@ public partial class SettingController : BaseAdminController
         if (loginByPhoneEnabled && 
             !(_customerSettings.PhoneEnabled && _customerSettings.PhoneRequired && _customerSettings.PhoneNumberValidationEnabled))
         {
+            var locale = await _localizationService
+                    .GetResourceAsync("Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning");
             return Json(new
             {
-                Result = await _localizationService
-                    .GetResourceAsync("Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning")
+                Result = string.Format(locale, Url.Action("CustomerUser", "Setting"))
             });
         }
 

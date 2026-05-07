@@ -599,7 +599,7 @@ public partial class CustomerModelFactory : ICustomerModelFactory
     /// <summary>
     /// Prepare the phone verification model
     /// </summary>
-    /// <param name="typeId">Value of UserPhoneVerificationType enum</param>
+    /// <param name="typeId">Value of phone verification flow enum</param>
     /// <param name="returnUrl">URL to redirect</param>
     /// <returns>
     /// A task that represents the asynchronous operation

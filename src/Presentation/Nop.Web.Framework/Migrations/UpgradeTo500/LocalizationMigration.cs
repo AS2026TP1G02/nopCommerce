@@ -505,8 +505,8 @@ public class LocalizationMigration : MigrationBase
             ["Admin.Configuration.AppSettings.Data.BulkCopyWithCheckConstraints"] = "Check constraints during bulk copy operations",
             ["Admin.Configuration.AppSettings.Data.BulkCopyWithCheckConstraints.Hint"] = "Check to validate data inserted by bulk copy operations against the check constraints defined in the target table. Uncheck to improve performance, but be aware that it can result in data that does not meet the table's integrity requirements.",
 
-			//#8117
-			["Admin.Configuration.AppSettings.Data.CloseDataContextAfterUse"] = "Close dataContext after use",
+            //#8117
+            ["Admin.Configuration.AppSettings.Data.CloseDataContextAfterUse"] = "Close dataContext after use",
             ["Admin.Configuration.AppSettings.Data.CloseDataContextAfterUse.Hint"] = "Check to automatically dispose the data context after each operation, which helps prevent resource leaks. Uncheck if you need to keep the data context open for multiple sequential operations.",
 
             //#8069
@@ -536,13 +536,14 @@ public class LocalizationMigration : MigrationBase
             ["Admin.Configuration.Settings.CustomerUser.OtpLength"] = "OTP code length",
             ["Admin.Configuration.Settings.CustomerUser.OtpLength.Hint"] = "The length of the OTP code.",
 
-            ["Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning"] = "Warning - Login by Phone requires the following prerequisites: Phone numbers enabled, Phone numbers required, and Phone number validation enabled. Please configure these settings accordingly.",
+            ["Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning"] = "Warning - Login by Phone requires the following prerequisites: \"'Phone number' enabled\", \"'Phone number' required\", and \"Phone number validation is enabled\" on the <a href=\"{0}\">Customer settings</a> page. Please configure these settings accordingly.",
             ["Account.Login.Fields.Phone"] = "Phone",
             ["Account.Login.EmailMode"] = "Login with email",
             ["Account.Login.PhoneMode"] = "Login with phone",
+            ["Account.Login.Phone.NotEnabled"] = "Phone login is not enabled.",
 
             // Phone verification
-            ["PageTitle.ChengePhone"] = "Change phone number",
+            ["PageTitle.ChangePhone"] = "Change phone number",
             ["PageTitle.RegisterOtp"] = "Phone number verification",
             ["PageTitle.LoginOtp"] = "Phone number verification",
 
@@ -569,7 +570,6 @@ public class LocalizationMigration : MigrationBase
             ["Admin.Configuration.Sms.Providers"] = "Sms providers",
             ["Admin.Configuration.Sms.Providers.BackToList"] = "back to sms provider list",
             ["Admin.Configuration.Sms.Providers.Configure"] = "Configure",
-            ["Admin.Configuration.Sms.Providers.DownloadMorePlugins"] = "You can download more plugins in our <a href=\"{0}\" target=\"_blank\">marketplace</a>",
             ["Admin.Configuration.Sms.Providers.Fields.FriendlyName"] = "Friendly name",
             ["Admin.Configuration.Sms.Providers.Fields.IsPrimaryProvider"] = "Is primary provider",
             ["Admin.Configuration.Sms.Providers.Fields.MarkAsPrimaryProvider"] = "Mark as primary provider",

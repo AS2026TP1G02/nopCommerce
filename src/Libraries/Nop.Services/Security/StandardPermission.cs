@@ -116,6 +116,7 @@ public partial class StandardPermission
         public const string MANAGE_EXTERNAL_AUTHENTICATION_METHODS = $"{nameof(Configuration)}.ManageExternalAuthenticationMethods";
         public const string MANAGE_MULTIFACTOR_AUTHENTICATION_METHODS = $"{nameof(Configuration)}.ManageMultifactorAuthenticationMethods";
         public const string MANAGE_TAX_SETTINGS = $"{nameof(Configuration)}.ManageTaxSettings";
+        public const string MANAGE_SMS_SETTINGS = $"{nameof(Configuration)}.ManageSmsSettings";
         public const string MANAGE_SHIPPING_SETTINGS = $"{nameof(Configuration)}.ManageShippingSettings";
         public const string MANAGE_CURRENCIES = $"{nameof(Configuration)}.ManageCurrencies";
         public const string MANAGE_ACL = $"{nameof(Configuration)}.ManageACL";

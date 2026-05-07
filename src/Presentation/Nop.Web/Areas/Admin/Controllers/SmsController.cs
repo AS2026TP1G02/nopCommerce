@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Nop.Core.Domain.Customers;
+using Nop.Core.Domain.Messages;
 using Nop.Services.Configuration;
 using Nop.Services.Messages;
 using Nop.Services.Security;
@@ -16,21 +16,21 @@ public partial class SmsController : BaseAdminController
     protected readonly ISettingService _settingService;
     protected readonly ISmsModelFactory _smsModelFactory;
     protected readonly ISmsPluginManager _smsPluginManager;
-    protected readonly OtpSettings _otpSettings;    
+    protected readonly MessagesSettings _messagesSettings;
 
     #endregion
 
     #region Ctor
 
     public SmsController(ISettingService settingService,
-        ISmsModelFactory taxModelFactory,
+        ISmsModelFactory smsModelFactory,
         ISmsPluginManager smsPluginManager,
-        OtpSettings otpSettings)
+        MessagesSettings messagesSettings)
     {
         _settingService = settingService;
-        _smsModelFactory = taxModelFactory;
+        _smsModelFactory = smsModelFactory;
         _smsPluginManager = smsPluginManager;
-        _otpSettings = otpSettings;
+        _messagesSettings = messagesSettings;
     }
 
     #endregion
@@ -42,7 +42,7 @@ public partial class SmsController : BaseAdminController
         return RedirectToAction("Providers");
     }
 
-    [CheckPermission(StandardPermission.Configuration.MANAGE_SETTINGS)]
+    [CheckPermission(StandardPermission.Configuration.MANAGE_SMS_SETTINGS)]
     public virtual async Task<IActionResult> Providers()
     {
         //prepare model
@@ -52,7 +52,7 @@ public partial class SmsController : BaseAdminController
     }
 
     [HttpPost]
-    [CheckPermission(StandardPermission.Configuration.MANAGE_SETTINGS)]
+    [CheckPermission(StandardPermission.Configuration.MANAGE_SMS_SETTINGS)]
     public virtual async Task<IActionResult> Providers(SmsProviderSearchModel searchModel)
     {
         //prepare model
@@ -61,18 +61,18 @@ public partial class SmsController : BaseAdminController
         return Json(model);
     }
 
-    [CheckPermission(StandardPermission.Configuration.MANAGE_SETTINGS)]
+    [CheckPermission(StandardPermission.Configuration.MANAGE_SMS_SETTINGS)]
     public virtual async Task<IActionResult> MarkAsPrimaryProvider(string systemName)
     {
         if (string.IsNullOrEmpty(systemName))
             return RedirectToAction("Providers");
 
-        var taxProvider = await _smsPluginManager.LoadPluginBySystemNameAsync(systemName);
-        if (taxProvider == null)
+        var smsProvider = await _smsPluginManager.LoadPluginBySystemNameAsync(systemName);
+        if (smsProvider == null)
             return RedirectToAction("Providers");
 
-        _otpSettings.ActiveSmsProviderSystemName = systemName;
-        await _settingService.SaveSettingAsync(_otpSettings);
+        _messagesSettings.ActiveSmsProviderSystemName = systemName;
+        await _settingService.SaveSettingAsync(_messagesSettings);
 
         return RedirectToAction("Providers");
     }

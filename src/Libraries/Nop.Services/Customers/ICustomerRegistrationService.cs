@@ -23,12 +23,11 @@ public partial interface ICustomerRegistrationService
     /// Validate a customer by phone number and a one-time password (OTP) code
     /// </summary>
     /// <param name="phone">The phone number associated with the customer to be validated</param>
-    /// <param name="otpCode">The one-time password (OTP) code sent to the customer's phone</param>
     /// <returns>
     /// A task that represents the asynchronous operation
     /// The task result contains the result
     /// </returns>
-    Task<CustomerLoginResults> ValidateCustomerByPhoneAsync(string phone, string otpCode);
+    Task<CustomerLoginResults> ValidateCustomerByPhoneAsync(string phone);
 
     /// <summary>
     /// Register customer

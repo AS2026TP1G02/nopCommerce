@@ -1,4 +1,4 @@
-﻿namespace Nop.Core.Domain.Customers;
+﻿namespace Nop.Services.Messages;
 
 /// <summary>
 /// Represents the context and state information for a one-time password (OTP) operation

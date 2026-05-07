@@ -336,6 +336,16 @@ public partial class CustomerController : BaseAdminController
             _notificationService.ErrorNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.ValidEmailRequiredRegisteredRole"));
         }
 
+        // check is verified phone number
+        var phoneNumber = model.Phone;
+        if (_otpSettings.LoginByPhoneEnabled && !string.IsNullOrEmpty(phoneNumber))
+        {
+            if (await _customerService.IsAlreadyExistsVerifiedPhoneNumberAsync(null, phoneNumber))
+            {
+                ModelState.AddModelError("", await _localizationService.GetResourceAsync("Account.IsAlreadyExistsVerifiedPhoneNumber"));
+            }
+        }
+
         //custom customer attributes
         var customerAttributesXml = await ParseCustomCustomerAttributesAsync(form);
         if (newCustomerRoles.Any() && newCustomerRoles.FirstOrDefault(c => c.SystemName == NopCustomerDefaults.RegisteredRoleName) != null)

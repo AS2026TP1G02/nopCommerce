@@ -1,4 +1,5 @@
 ﻿using Nop.Core.Domain.Customers;
+using Nop.Core.Domain.Messages;
 using Nop.Services.Customers;
 using Nop.Services.Plugins;
 
@@ -11,16 +12,16 @@ public partial class SmsPluginManager : PluginManager<ISmsProvider>, ISmsPluginM
 {
     #region Fields
 
-    protected readonly OtpSettings _otpSettings;
+    protected readonly MessagesSettings _messagesSettings;
 
     #endregion
 
     #region Ctor
-    public SmsPluginManager(ICustomerService customerService, 
+    public SmsPluginManager(ICustomerService customerService,
         IPluginService pluginService,
-        OtpSettings otpSettings) : base(customerService, pluginService)
+        MessagesSettings messagesSettings) : base(customerService, pluginService)
     {
-        _otpSettings = otpSettings;
+        _messagesSettings = messagesSettings;
     }
 
     #endregion
@@ -38,7 +39,10 @@ public partial class SmsPluginManager : PluginManager<ISmsProvider>, ISmsPluginM
     /// </returns>
     public virtual async Task<ISmsProvider> LoadPrimaryPluginAsync(Customer customer = null, int storeId = 0)
     {
-        return await LoadPrimaryPluginAsync(_otpSettings.ActiveSmsProviderSystemName, customer, storeId);
+        if (string.IsNullOrEmpty(_messagesSettings.ActiveSmsProviderSystemName))
+            return null;
+
+        return await LoadPrimaryPluginAsync(_messagesSettings.ActiveSmsProviderSystemName, customer, storeId);
     }
 
     /// <summary>
@@ -48,7 +52,7 @@ public partial class SmsPluginManager : PluginManager<ISmsProvider>, ISmsPluginM
     /// <returns>Result</returns>
     public virtual bool IsPluginActive(ISmsProvider smsProvider)
     {
-        return IsPluginActive(smsProvider, [_otpSettings.ActiveSmsProviderSystemName]);
+        return IsPluginActive(smsProvider, [_messagesSettings.ActiveSmsProviderSystemName]);
     }
 
     /// <summary>

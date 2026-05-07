@@ -8,9 +8,11 @@ namespace Nop.Services.Messages;
 public partial interface ISmsProvider : IPlugin
 {
     /// <summary>
-    /// Sends SMS
+    /// Sends an SMS message to the specified phone number
     /// </summary>
-    /// <param name="phone">Phone number</param>
-    /// <param name="text">Text</param>
+    /// <param name="phone">The destination phone number for the SMS message</param>
+    /// <param name="text">The text content of the SMS message</param>
+    /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the SMS message
+    /// was sent successfully; otherwise, <see langword="false"/>.</returns>
     Task<bool> SendSmsAsync(string phone, string text);
 }

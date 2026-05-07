@@ -531,6 +531,9 @@
    <LocaleResource Name="Account.Login.PhoneMode">
      <Value>Login with phone</Value>
    </LocaleResource>   
+   <LocaleResource Name="Account.Login.Phone.NotEnabled">
+     <Value>Phone login is not enabled.</Value>
+   </LocaleResource>
    <LocaleResource Name="Account.Login.Phone.Required">
      <Value>Phone number is required</Value>
    </LocaleResource>
@@ -7255,8 +7258,8 @@
     <Value>Check if 'Login by phone' is enabled.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning">
-    <Value>Warning - Login by Phone requires the following prerequisites: Phone numbers enabled, Phone numbers required, and Phone number validation enabled. Please configure these settings accordingly.</Value>
-  </LocaleResource>
+    <Value>
+      <![CDATA[Warning - Login by Phone requires the following prerequisites: "'Phone number' enabled", "'Phone number' required", and "Phone number validation is enabled" on the <a href="{0}">Customer settings</a> page. Please configure these settings accordingly.]]></Value>  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.CustomerUser.NewsletterBlockAllowToUnsubscribe">
     <Value>Newsletter box. Allow to unsubscribe</Value>
   </LocaleResource>
@@ -10003,9 +10006,6 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Sms.Providers.Configure">
     <Value>Configure</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.Configuration.Sms.Providers.DownloadMorePlugins">
-    <Value><![CDATA[You can download more plugins in our <a href="{0}" target="_blank">marketplace</a>]]></Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Sms.Providers.Fields.FriendlyName">
     <Value>Friendly name</Value>
@@ -18689,8 +18689,8 @@
   <LocaleResource Name="PageTitle.Checkout">
     <Value>Checkout</Value>
   </LocaleResource>
-  <LocaleResource Name="PageTitle.ChengePhone">
-    <Value>Chenge phone number</Value>
+  <LocaleResource Name="PageTitle.ChangePhone">
+    <Value>Change phone number</Value>
   </LocaleResource>
   <LocaleResource Name="PageTitle.CompareProducts">
     <Value>Compare Products</Value>

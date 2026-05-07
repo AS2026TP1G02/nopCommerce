@@ -1,7 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Routing;
-using Newtonsoft.Json;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Events;
@@ -43,7 +40,6 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
     protected readonly IWebHelper _webHelper;
     protected readonly IWorkContext _workContext;
     protected readonly IWorkflowMessageService _workflowMessageService;
-    protected readonly OtpSettings _otpSettings;
     protected readonly RewardPointsSettings _rewardPointsSettings;
 
     #endregion
@@ -68,7 +64,6 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
         IWebHelper webHelper,
         IWorkContext workContext,
         IWorkflowMessageService workflowMessageService,
-        OtpSettings otpSettings,
         RewardPointsSettings rewardPointsSettings)
     {
         _customerSettings = customerSettings;
@@ -89,7 +84,6 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
         _webHelper = webHelper;
         _workContext = workContext;
         _workflowMessageService = workflowMessageService;
-        _otpSettings = otpSettings;
         _rewardPointsSettings = rewardPointsSettings;
     }
 
@@ -204,12 +198,11 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
     /// Validate a customer by phone number and a one-time password (OTP) code
     /// </summary>
     /// <param name="phone">The phone number associated with the customer to be validated</param>
-    /// <param name="otpCode">The one-time password (OTP) code sent to the customer's phone</param>
     /// <returns>
     /// A task that represents the asynchronous operation
     /// The task result contains the result
     /// </returns>
-    public virtual async Task<CustomerLoginResults> ValidateCustomerByPhoneAsync(string phone, string otpCode)
+    public virtual async Task<CustomerLoginResults> ValidateCustomerByPhoneAsync(string phone)
     {
         var customer = await _customerService.GetCustomerByPhoneAsync(phone);
 
@@ -230,9 +223,6 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
         await _genericAttributeService.SaveAttributeAsync(customer, NopCustomerDefaults.OtpContextAttribute, (string)null);
 
         //update login details
-        customer.FailedLoginAttempts = 0;
-        customer.CannotLoginUntilDateUtc = null;
-        customer.RequireReLogin = false;
         customer.LastLoginDateUtc = DateTime.UtcNow;
         customer.PhoneSmsVerified = true;
         await _customerService.UpdateCustomerAsync(customer);

@@ -1,4 +1,5 @@
-﻿using Nop.Web.Framework.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using Nop.Web.Framework.Models;
 using Nop.Web.Framework.Mvc.ModelBinding;
 
 namespace Nop.Plugin.Sms.Twilio.Models;
@@ -11,6 +12,7 @@ public record ConfigurationModel : BaseNopModel
     #region Properties
 
     [NopResourceDisplayName("Plugins.Sms.Twilio.Credentials.Fields.AuthToken")]
+    [DataType(DataType.Password)]
     public string AuthToken { get; set; }
 
     [NopResourceDisplayName("Plugins.Sms.Twilio.Credentials.Fields.AccountSID")]

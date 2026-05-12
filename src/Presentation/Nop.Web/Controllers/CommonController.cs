@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Nop.Core;
 using Nop.Core.Domain;
@@ -34,7 +35,6 @@ public partial class CommonController : BasePublicController
     protected readonly CaptchaSettings _captchaSettings;
     protected readonly CommonSettings _commonSettings;
     protected readonly IAttributeService<ContactFormAttribute, ContactFormAttributeValue> _contactFormAttributeService;
-    protected readonly IAttributeParser<ContactFormAttribute, ContactFormAttributeValue> _contactFormAttributeParser;
     protected readonly ICommonModelFactory _commonModelFactory;
     protected readonly ICurrencyService _currencyService;
     protected readonly ICustomerActivityService _customerActivityService;
@@ -61,7 +61,6 @@ public partial class CommonController : BasePublicController
     public CommonController(CaptchaSettings captchaSettings,
         CommonSettings commonSettings,
         IAttributeService<ContactFormAttribute, ContactFormAttributeValue> contactFormAttributeService,
-        IAttributeParser<ContactFormAttribute, ContactFormAttributeValue> contactFormAttributeParser,
         ICommonModelFactory commonModelFactory,
         ICurrencyService currencyService,
         ICustomerActivityService customerActivityService,
@@ -84,7 +83,6 @@ public partial class CommonController : BasePublicController
         _captchaSettings = captchaSettings;
         _commonSettings = commonSettings;
         _contactFormAttributeService = contactFormAttributeService;
-        _contactFormAttributeParser = contactFormAttributeParser;
         _commonModelFactory = commonModelFactory;
         _currencyService = currencyService;
         _customerActivityService = customerActivityService;
@@ -109,7 +107,7 @@ public partial class CommonController : BasePublicController
 
     #region Utilities
 
-    protected virtual async IAsyncEnumerable<(string Name, string Value, string Error)> ParseCustomCustomerAttributesAsync(IFormCollection form)
+    protected virtual async IAsyncEnumerable<(string Name, string Value, string Error)> ParseCustomContactFormAttributesAsync(IFormCollection form)
     {
         ArgumentNullException.ThrowIfNull(form);
 
@@ -159,7 +157,7 @@ public partial class CommonController : BasePublicController
                 {
                     var ctrlAttributes = form[controlId];
                     if (!StringValues.IsNullOrEmpty(ctrlAttributes))
-                        inputValue = string.Join(", ", ctrlAttributes.ToString().Trim());
+                        inputValue = WebUtility.HtmlEncode(string.Join(", ", ctrlAttributes.ToString().Trim()));
                 }
                 break;
                 //not supported customer attributes
@@ -174,7 +172,7 @@ public partial class CommonController : BasePublicController
 
             var notFoundWarning = "";
             if (attribute.IsRequired && string.IsNullOrEmpty(inputValue))
-                notFoundWarning = string.Format(await _localizationService.GetResourceAsync("ShoppingCart.SelectAttribute"), await _localizationService.GetLocalizedAsync(attribute, a => a.Name));
+                notFoundWarning = string.Format(await _localizationService.GetResourceAsync("ContactUs.SelectAttribute"), await _localizationService.GetLocalizedAsync(attribute, a => a.Name));
 
             yield return (attribute.Name, inputValue, notFoundWarning);
         }
@@ -281,7 +279,7 @@ public partial class CommonController : BasePublicController
         if (_captchaSettings.Enabled && _captchaSettings.ShowOnContactUsPage && !captchaValid)
             ModelState.AddModelError("", await _localizationService.GetResourceAsync("Common.WrongCaptchaMessage"));
 
-        var customFields = await ParseCustomCustomerAttributesAsync(form).ToListAsync();
+        var customFields = await ParseCustomContactFormAttributesAsync(form).ToListAsync();
 
         foreach (var (_, _, error) in customFields.Where(x => !string.IsNullOrEmpty(x.Error)).ToList())
             ModelState.AddModelError("", error);

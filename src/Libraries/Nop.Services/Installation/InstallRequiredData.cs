@@ -1094,14 +1094,14 @@ public partial class InstallationService
                 new() {
                     Name = MessageTemplateSystemNames.CONTACT_US_MESSAGE,
                     Subject = "%Store.Name%. Contact us",
-                    Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}",
+                    Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}%ContactUs.CustomFields%{Environment.NewLine}",
                     IsActive = true,
                     EmailAccountId = eaGeneral.Id
                 },
                 new() {
                     Name = MessageTemplateSystemNames.CONTACT_VENDOR_MESSAGE,
                     Subject = "%Store.Name%. Contact us",
-                    Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}%ContactUs.CustomFields%{Environment.NewLine}",
+                    Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
                     EmailAccountId = eaGeneral.Id
                 },

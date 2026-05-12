@@ -15,7 +15,7 @@ public partial class ContactFormAttributeModelFactory : IContactFormAttributeMod
 {
     #region Fields
 
-    protected readonly IAttributeService<ContactFormAttribute, ContactFormAttributeValue> _contactFormrAttributeService;
+    protected readonly IAttributeService<ContactFormAttribute, ContactFormAttributeValue> _contactFormAttributeService;
     protected readonly ILocalizationService _localizationService;
     protected readonly ILocalizedModelFactory _localizedModelFactory;
 
@@ -27,7 +27,7 @@ public partial class ContactFormAttributeModelFactory : IContactFormAttributeMod
         ILocalizationService localizationService,
         ILocalizedModelFactory localizedModelFactory)
     {
-        _contactFormrAttributeService = contactFormAttributeService;
+        _contactFormAttributeService = contactFormAttributeService;
         _localizationService = localizationService;
         _localizedModelFactory = localizedModelFactory;
     }
@@ -92,7 +92,7 @@ public partial class ContactFormAttributeModelFactory : IContactFormAttributeMod
         ArgumentNullException.ThrowIfNull(searchModel);
 
         //get contact form attributes
-        var contactFormAttributes = (await _contactFormrAttributeService.GetAllAttributesAsync()).ToPagedList(searchModel);
+        var contactFormAttributes = (await _contactFormAttributeService.GetAllAttributesAsync()).ToPagedList(searchModel);
 
         //prepare list model
         var model = await new ContactFormAttributeListModel().PrepareToGridAsync(searchModel, contactFormAttributes, () =>
@@ -166,7 +166,7 @@ public partial class ContactFormAttributeModelFactory : IContactFormAttributeMod
         ArgumentNullException.ThrowIfNull(contactFormAttribute);
 
         //get contact form attribute values
-        var contactFormAttributeValues = (await _contactFormrAttributeService
+        var contactFormAttributeValues = (await _contactFormAttributeService
             .GetAttributeValuesAsync(contactFormAttribute.Id)).ToPagedList(searchModel);
 
         //prepare list model

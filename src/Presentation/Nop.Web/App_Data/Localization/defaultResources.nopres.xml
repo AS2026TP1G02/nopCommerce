@@ -4609,7 +4609,7 @@
     <Value>Choose how to display your attribute values.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.DisplayOrder">
-    <Value>DisplayOrder</Value>
+    <Value>Display order</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.DisplayOrder.Hint">
     <Value>The contact form attribute display order. 1 represents the first item in the list.</Value>
@@ -4625,6 +4625,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.Name.Hint">
     <Value>The name of the contact form attribute.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Fields.Name.Required">
+    <Value>Please provide a name.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Info">
     <Value>Attribute info</Value>
@@ -4643,6 +4646,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.Name.Hint">
     <Value>The name of the contact form attribute.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.Name.Required">
+    <Value>Please provide a name.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Common.ContactFormAttributes.Values.Fields.DisplayOrder">
     <Value>Display order</Value>
@@ -17422,6 +17428,9 @@
   </LocaleResource>
   <LocaleResource Name="ContactUs.FullName.Required">
     <Value>Enter your name</Value>
+  </LocaleResource>
+  <LocaleResource Name="ContactUs.SelectAttribute">
+    <Value>Please select {0}</Value>
   </LocaleResource>
   <LocaleResource Name="ContactUs.Subject">
     <Value>Subject</Value>

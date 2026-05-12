@@ -154,61 +154,6 @@ public partial class CommonModelFactory : ICommonModelFactory
     }
 
     /// <summary>
-    /// Apply custom values for contact form attribute model
-    /// </summary>
-    /// <param name="attributeModel">Contact form attribute model</param>
-    /// <param name="form">Form values</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// </returns>
-    protected virtual async Task ApplyContactFormAttributeValuesAsync(ContactFormAttributeModel attributeModel, IFormCollection form)
-    {
-        var controlId = string.Format(NopCommonDefaults.ContactFormAttributeControlName, attributeModel.Id);
-
-        switch (attributeModel.AttributeControlType)
-        {
-            case AttributeControlType.DropdownList:
-            case AttributeControlType.RadioList:
-            case AttributeControlType.Checkboxes:
-            {
-                var ctrlAttributes = form[controlId];
-                if (!StringValues.IsNullOrEmpty(ctrlAttributes))
-                {
-                    foreach (var attributeId in ctrlAttributes)
-                    {
-                        var selectedAttributeId = int.Parse(attributeId);
-                        if (selectedAttributeId == 0)
-                            continue;
-
-                        foreach (var item in attributeModel.Values)
-                        {
-                            if (selectedAttributeId == item.Id)
-                                item.IsPreSelected = true;
-                        }
-                    }
-                }
-            }
-            break;
-            case AttributeControlType.TextBox:
-            case AttributeControlType.MultilineTextbox:
-            {
-                var ctrlAttributes = form[controlId];
-                if (!StringValues.IsNullOrEmpty(ctrlAttributes))
-                    attributeModel.DefaultValue = string.Join(", ", ctrlAttributes.ToString().Trim());
-            }
-            break;
-            //not supported customer attributes
-            case AttributeControlType.ReadonlyCheckboxes:
-            case AttributeControlType.Datepicker:
-            case AttributeControlType.ColorSquares:
-            case AttributeControlType.ImageSquares:
-            case AttributeControlType.FileUpload:
-            default:
-                break;
-        }
-    }
-
-    /// <summary>
     /// Get the number of unread private messages
     /// </summary>
     /// <returns>
@@ -227,6 +172,98 @@ public partial class CommonModelFactory : ICommonModelFactory
 
             if (privateMessages.TotalCount > 0)
                 result = privateMessages.TotalCount;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Prepare the contact form attribute models
+    /// </summary>
+    /// <param name="form">Form values</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the list of the contact form attribute model
+    /// </returns>
+    protected virtual async Task<IList<ContactFormAttributeModel>> PrepareContactFormAttributesAsync(IFormCollection form = null)
+    {
+        var result = new List<ContactFormAttributeModel>();
+
+        var attributes = await _contactFormAttributeService.GetAllAttributesAsync();
+        foreach (var attribute in attributes)
+        {
+            var attributeModel = new ContactFormAttributeModel
+            {
+                Id = attribute.Id,
+                Name = await _localizationService.GetLocalizedAsync(attribute, x => x.Name),
+                IsRequired = attribute.IsRequired,
+                AttributeControlType = attribute.AttributeControlType,
+            };
+
+            if (attribute.ShouldHaveValues)
+            {
+                //values
+                var attributeValues = await _contactFormAttributeService.GetAttributeValuesAsync(attribute.Id);
+                foreach (var attributeValue in attributeValues)
+                {
+                    var valueModel = new ContactFormAttributeValueModel
+                    {
+                        Id = attributeValue.Id,
+                        Name = await _localizationService.GetLocalizedAsync(attributeValue, x => x.Name),
+                        IsPreSelected = attributeValue.IsPreSelected
+                    };
+
+                    attributeModel.Values.Add(valueModel);
+                }
+            }
+
+            if (form is not null)
+            {
+                var controlId = string.Format(NopCommonDefaults.ContactFormAttributeControlName, attributeModel.Id);
+
+                switch (attributeModel.AttributeControlType)
+                {
+                    case AttributeControlType.DropdownList:
+                    case AttributeControlType.RadioList:
+                    case AttributeControlType.Checkboxes:
+                    {
+                        var ctrlAttributes = form[controlId];
+                        if (!StringValues.IsNullOrEmpty(ctrlAttributes))
+                        {
+                            foreach (var attributeId in ctrlAttributes)
+                            {
+                                var selectedAttributeId = int.Parse(attributeId);
+                                if (selectedAttributeId == 0)
+                                    continue;
+
+                                foreach (var item in attributeModel.Values)
+                                {
+                                    if (selectedAttributeId == item.Id)
+                                        item.IsPreSelected = true;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                    case AttributeControlType.TextBox:
+                    case AttributeControlType.MultilineTextbox:
+                    {
+                        var ctrlAttributes = form[controlId];
+                        if (!StringValues.IsNullOrEmpty(ctrlAttributes))
+                            attributeModel.DefaultValue = string.Join(", ", ctrlAttributes.ToString().Trim());
+                    }
+                    break;
+                    //not supported customer attributes
+                    case AttributeControlType.ReadonlyCheckboxes:
+                    case AttributeControlType.Datepicker:
+                    case AttributeControlType.ColorSquares:
+                    case AttributeControlType.ImageSquares:
+                    case AttributeControlType.FileUpload:
+                    default:
+                        break;
+                }
+            }
+            result.Add(attributeModel);
         }
 
         return result;
@@ -656,56 +693,6 @@ public partial class CommonModelFactory : ICommonModelFactory
         }
 
         return sb.ToString();
-    }
-
-    /// <summary>
-    /// Prepare the contact form attribute models
-    /// </summary>
-    /// <param name="form">Form values</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// The task result contains the list of the contact form attribute model
-    /// </returns>
-    public virtual async Task<IList<ContactFormAttributeModel>> PrepareContactFormAttributesAsync(IFormCollection form = null)
-    {
-        var result = new List<ContactFormAttributeModel>();
-
-        var attributes = await _contactFormAttributeService.GetAllAttributesAsync();
-        foreach (var attribute in attributes)
-        {
-
-            var attributeModel = new ContactFormAttributeModel
-            {
-                Id = attribute.Id,
-                Name = await _localizationService.GetLocalizedAsync(attribute, x => x.Name),
-                IsRequired = attribute.IsRequired,
-                AttributeControlType = attribute.AttributeControlType,
-            };
-
-            if (attribute.ShouldHaveValues)
-            {
-                //values
-                var attributeValues = await _contactFormAttributeService.GetAttributeValuesAsync(attribute.Id);
-                foreach (var attributeValue in attributeValues)
-                {
-                    var valueModel = new ContactFormAttributeValueModel
-                    {
-                        Id = attributeValue.Id,
-                        Name = await _localizationService.GetLocalizedAsync(attributeValue, x => x.Name),
-                        IsPreSelected = attributeValue.IsPreSelected
-                    };
-
-                    attributeModel.Values.Add(valueModel);
-                }
-            }
-
-            if (form is not null)
-                await ApplyContactFormAttributeValuesAsync(attributeModel, form);
-
-            result.Add(attributeModel);
-        }
-
-        return result;
     }
 
     #endregion

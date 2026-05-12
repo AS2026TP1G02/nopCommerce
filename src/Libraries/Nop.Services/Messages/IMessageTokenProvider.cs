@@ -21,9 +21,9 @@ public partial interface IMessageTokenProvider
     /// <param name="senderEmail">Sender email</param>
     /// <param name="senderName">Sender name</param>
     /// <param name="body">Email body</param>
-    /// <param name="customAttribures">Custom attributes</param>
+    /// <param name="customAttributes">Custom attributes</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttribures);
+    Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttributes);
 
     /// <summary>
     /// Add store tokens

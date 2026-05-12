@@ -483,7 +483,8 @@ public partial class MessageTokenProvider : IMessageTokenProvider
                     {
                         "%ContactUs.SenderEmail%",
                         "%ContactUs.SenderName%",
-                        "%ContactUs.Body%"
+                        "%ContactUs.Body%",
+                        "%ContactUs.CustomFields%"
                     }
                 },
 
@@ -973,9 +974,9 @@ public partial class MessageTokenProvider : IMessageTokenProvider
     /// <param name="senderEmail">Sender email</param>
     /// <param name="senderName">Sender name</param>
     /// <param name="body">Email body</param>
-    /// <param name="customAttribures">Custom attributes</param>
+    /// <param name="customAttributes">Custom attributes</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    public virtual async Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttribures)
+    public virtual async Task AddContactFormTokensAsync(IList<Token> tokens, string senderEmail, string senderName, string body, IDictionary<string, string> customAttributes)
     {
         ArgumentException.ThrowIfNullOrEmpty(body);
 
@@ -983,10 +984,10 @@ public partial class MessageTokenProvider : IMessageTokenProvider
         tokens.Add(new Token("ContactUs.SenderName", senderName));
         tokens.Add(new Token("ContactUs.Body", body, true));
 
-        if (customAttribures is not null)
+        if (customAttributes?.Any() == true)
         {
             var fieldsHtml = new StringBuilder();
-            foreach (var (name, value) in customAttribures)
+            foreach (var (name, value) in customAttributes)
                 fieldsHtml.AppendLine($"<p><strong>{name}</strong>: {value}</p>");
 
             tokens.Add(new Token("ContactUs.CustomFields", fieldsHtml, true));

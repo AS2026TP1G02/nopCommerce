@@ -57,7 +57,7 @@
                             <nop-label asp-for="AuthToken" />
                         </div>
                         <div class="col-md-9">
-                            <nop-editor asp-for="AuthToken" />
+                            <nop-editor asp-for="AuthToken" html-attributes="@(new { value = Model.AuthToken })" />
                             <span asp-validation-for="AuthToken"></span>
                         </div>
                     </div>                    

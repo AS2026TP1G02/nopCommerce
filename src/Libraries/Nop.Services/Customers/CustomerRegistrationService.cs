@@ -195,7 +195,7 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
 
 
     /// <summary>
-    /// Validate a customer by phone number and a one-time password (OTP) code
+    /// Validate a customer by phone number
     /// </summary>
     /// <param name="phone">The phone number associated with the customer to be validated</param>
     /// <returns>
@@ -215,9 +215,6 @@ public partial class CustomerRegistrationService : ICustomerRegistrationService
         //only registered can login
         if (!await _customerService.IsRegisteredAsync(customer))
             return CustomerLoginResults.NotRegistered;
-        //check whether a customer is locked out
-        if (customer.CannotLoginUntilDateUtc.HasValue && customer.CannotLoginUntilDateUtc.Value > DateTime.UtcNow)
-            return CustomerLoginResults.LockedOut;
 
         // Clear OTP context after successful verification
         await _genericAttributeService.SaveAttributeAsync(customer, NopCustomerDefaults.OtpContextAttribute, (string)null);

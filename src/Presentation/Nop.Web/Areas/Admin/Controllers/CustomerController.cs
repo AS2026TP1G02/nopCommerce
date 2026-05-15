@@ -28,6 +28,7 @@ using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Mvc;
 using Nop.Web.Framework.Mvc.Filters;
+using PhoneNumbers;
 
 namespace Nop.Web.Areas.Admin.Controllers;
 
@@ -260,6 +261,25 @@ public partial class CustomerController : BaseAdminController
         return customers.Any(c => c.Active && c.Id != customer.Id);
     }
 
+    protected virtual string FormatPhoneNumber(string phone)
+    {
+        if (string.IsNullOrEmpty(phone))
+            return phone;
+
+        try
+        {
+            var phoneNumberUtil = PhoneNumberUtil.GetInstance();
+            var regionCode = phoneNumberUtil.GetRegionCodeForNumber(phoneNumberUtil.Parse(phone, null));
+
+            var phoneNumber = phoneNumberUtil.Parse(phone, regionCode);
+            return phoneNumberUtil.Format(phoneNumber, PhoneNumberFormat.E164);
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
     #endregion
 
     #region Customers
@@ -336,8 +356,8 @@ public partial class CustomerController : BaseAdminController
             _notificationService.ErrorNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.ValidEmailRequiredRegisteredRole"));
         }
 
-        // check is verified phone number
-        var phoneNumber = model.Phone;
+        //check is verified phone number
+        var phoneNumber = FormatPhoneNumber(model.Phone);
         if (_otpSettings.LoginByPhoneEnabled && !string.IsNullOrEmpty(phoneNumber))
         {
             if (await _customerService.IsAlreadyExistsVerifiedPhoneNumberAsync(null, phoneNumber))
@@ -516,7 +536,7 @@ public partial class CustomerController : BaseAdminController
         }
 
         //check is verified phone number
-        var phoneNumber = model.Phone;
+        var phoneNumber = FormatPhoneNumber(model.Phone);
         if (_otpSettings.LoginByPhoneEnabled && !string.IsNullOrEmpty(phoneNumber))
         {
             if (await _customerService.IsAlreadyExistsVerifiedPhoneNumberAsync(customer, phoneNumber))

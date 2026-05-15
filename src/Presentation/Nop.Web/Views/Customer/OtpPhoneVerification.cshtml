@@ -119,12 +119,12 @@
                         startTimer(result.remainingSeconds);
                         otpInput.focus();
                     } else {
-                        displayBarNotification(result.message || "@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
+                        notification(result.message || "@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
                         $btn.prop("disabled", false);
                     }
                 },
                 error: function() {
-                    displayBarNotification("@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
+                    notification("@T("PhoneVerification.OtpCode.Error.SendError")", 'error');
                     $btn.prop("disabled", false);
                 }
             });
@@ -137,7 +137,7 @@
             const otpCode = otpInput.val();
 
             if (!phone || !otpCode) {
-                displayBarNotification("@T("PhoneVerification.OtpCode.Required")", 'warning');
+                notification("@T("PhoneVerification.OtpCode.Required")", 'warning');
                 return;
             }
 
@@ -159,7 +159,7 @@
                     if (result.success) {
                         window.location.href = '@Model.ReturnUrl';
                     } else {
-                        displayBarNotification(result.message || "@T("PhoneVerification.OtpCode.Error.Verification")", 'error');
+                        notification(result.message || "@T("PhoneVerification.OtpCode.Error.Verification")", 'error');
                         otpInput.val("").prop("disabled", false).focus();
                     }
                 },
@@ -169,11 +169,19 @@
                         var response = JSON.parse(xhr.responseText);
                         if (response.message) message = response.message;
                     } catch { }
-                    displayBarNotification(message, 'error');
+                    notification(message, 'error');
                     otpInput.val("").prop("disabled", false).focus();
                 }
             });
         });
-
     });
+
+    function notification(message, type) {
+        var popup = @Model.UsePopupNotifications.ToString().ToLower();
+        if (popup) {
+            displayPopupNotification(message, type);
+        } else {
+            displayBarNotification(message, type);
+        }
+    }
 </script>

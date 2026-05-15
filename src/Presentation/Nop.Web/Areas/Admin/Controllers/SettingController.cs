@@ -1279,7 +1279,7 @@ public partial class SettingController : BaseAdminController
                 }
             }
 
-            await _settingService.SaveSettingAsync(customerSettings); 
+            await _settingService.SaveSettingAsync(customerSettings);
 
             privateMessageSettings = model.PrivateMessageSettings.ToSettings(privateMessageSettings);
             await _settingService.SaveSettingAsync(privateMessageSettings);
@@ -2023,14 +2023,13 @@ public partial class SettingController : BaseAdminController
     //Action that displays a notification (warning) to the store owner about the incorrect configuration of LoginByPhone feature
     public virtual async Task<IActionResult> LoginByPhoneEnabledWarning(bool loginByPhoneEnabled)
     {
-        if (loginByPhoneEnabled && 
+        if (loginByPhoneEnabled &&
             !(_customerSettings.PhoneEnabled && _customerSettings.PhoneRequired && _customerSettings.PhoneNumberValidationEnabled))
         {
-            var locale = await _localizationService
-                    .GetResourceAsync("Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning");
+            var locale = await _localizationService.GetResourceAsync("Admin.Configuration.Settings.CustomerUser.LoginByPhoneEnabled.Warning");
             return Json(new
             {
-                Result = string.Format(locale, Url.Action("CustomerUser", "Setting"))
+                Result = string.Format(locale, Url.Action("CustomerUser", "Setting", null, null, null, "customersettings-customerformfields"))
             });
         }
 

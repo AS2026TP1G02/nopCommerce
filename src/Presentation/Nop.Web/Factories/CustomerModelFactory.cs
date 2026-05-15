@@ -6,6 +6,7 @@ using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Gdpr;
 using Nop.Core.Domain.Media;
+using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Security;
 using Nop.Core.Domain.Tax;
@@ -73,6 +74,7 @@ public partial class CustomerModelFactory : ICustomerModelFactory
     protected readonly IUrlRecordService _urlRecordService;
     protected readonly IWorkContext _workContext;
     protected readonly MediaSettings _mediaSettings;
+    protected readonly MessagesSettings _messagesSettings;
     protected readonly OrderSettings _orderSettings;
     protected readonly OtpSettings _otpSettings;
     protected readonly RewardPointsSettings _rewardPointsSettings;
@@ -118,6 +120,7 @@ public partial class CustomerModelFactory : ICustomerModelFactory
         IUrlRecordService urlRecordService,
         IWorkContext workContext,
         MediaSettings mediaSettings,
+        MessagesSettings messagesSettings,
         OrderSettings orderSettings,
         OtpSettings otpSettings,
         RewardPointsSettings rewardPointsSettings,
@@ -159,6 +162,7 @@ public partial class CustomerModelFactory : ICustomerModelFactory
         _urlRecordService = urlRecordService;
         _workContext = workContext;
         _mediaSettings = mediaSettings;
+        _messagesSettings = messagesSettings;
         _orderSettings = orderSettings;
         _otpSettings = otpSettings;
         _rewardPointsSettings = rewardPointsSettings;
@@ -541,7 +545,7 @@ public partial class CustomerModelFactory : ICustomerModelFactory
         var model = new LoginModel
         {
             UsernamesEnabled = _customerSettings.UsernamesEnabled,
-            LoginByPhoneEnabled = _otpSettings.LoginByPhoneEnabled,
+            LoginByPhone = _otpSettings.LoginByPhoneEnabled,
             RegistrationType = _customerSettings.UserRegistrationType,
             CheckoutAsGuest = checkoutAsGuest.GetValueOrDefault(),
             DisplayCaptcha = _captchaSettings.Enabled && _captchaSettings.ShowOnLoginPage
@@ -612,7 +616,8 @@ public partial class CustomerModelFactory : ICustomerModelFactory
         {
             ReturnUrl = returnUrl,
             Phone = customer.Phone,
-            VerificationFlow = (PhoneVerificationFlowEnum)typeId
+            VerificationFlow = (PhoneVerificationFlowEnum)typeId,
+            UsePopupNotifications = _messagesSettings.UsePopupNotifications
         };
 
         switch (typeId)
@@ -1073,43 +1078,43 @@ public partial class CustomerModelFactory : ICustomerModelFactory
                 case AttributeControlType.DropdownList:
                 case AttributeControlType.RadioList:
                 case AttributeControlType.Checkboxes:
-                {
-                    if (!string.IsNullOrEmpty(selectedAttributesXml))
                     {
-                        if (!_customerAttributeParser.ParseValues(selectedAttributesXml, attribute.Id).Any())
-                            break;
-
-                        //clear default selection                                
-                        foreach (var item in attributeModel.Values)
-                            item.IsPreSelected = false;
-
-                        //select new values
-                        var selectedValues = await _customerAttributeParser.ParseAttributeValuesAsync(selectedAttributesXml);
-                        foreach (var attributeValue in selectedValues)
-                        foreach (var item in attributeModel.Values)
+                        if (!string.IsNullOrEmpty(selectedAttributesXml))
                         {
-                            if (attributeValue.Id == item.Id)
-                                item.IsPreSelected = true;
+                            if (!_customerAttributeParser.ParseValues(selectedAttributesXml, attribute.Id).Any())
+                                break;
+
+                            //clear default selection                                
+                            foreach (var item in attributeModel.Values)
+                                item.IsPreSelected = false;
+
+                            //select new values
+                            var selectedValues = await _customerAttributeParser.ParseAttributeValuesAsync(selectedAttributesXml);
+                            foreach (var attributeValue in selectedValues)
+                                foreach (var item in attributeModel.Values)
+                                {
+                                    if (attributeValue.Id == item.Id)
+                                        item.IsPreSelected = true;
+                                }
                         }
                     }
-                }
                     break;
                 case AttributeControlType.ReadonlyCheckboxes:
-                {
-                    //do nothing
-                    //values are already pre-set
-                }
+                    {
+                        //do nothing
+                        //values are already pre-set
+                    }
                     break;
                 case AttributeControlType.TextBox:
                 case AttributeControlType.MultilineTextbox:
-                {
-                    if (!string.IsNullOrEmpty(selectedAttributesXml))
                     {
-                        var enteredText = _customerAttributeParser.ParseValues(selectedAttributesXml, attribute.Id);
-                        if (enteredText.Any())
-                            attributeModel.DefaultValue = enteredText[0];
+                        if (!string.IsNullOrEmpty(selectedAttributesXml))
+                        {
+                            var enteredText = _customerAttributeParser.ParseValues(selectedAttributesXml, attribute.Id);
+                            if (enteredText.Any())
+                                attributeModel.DefaultValue = enteredText[0];
+                        }
                     }
-                }
                     break;
                 case AttributeControlType.ColorSquares:
                 case AttributeControlType.ImageSquares:

@@ -20,7 +20,7 @@ public partial interface ICustomerRegistrationService
     Task<CustomerLoginResults> ValidateCustomerAsync(string usernameOrEmail, string password);
 
     /// <summary>
-    /// Validate a customer by phone number and a one-time password (OTP) code
+    /// Validate a customer by phone
     /// </summary>
     /// <param name="phone">The phone number associated with the customer to be validated</param>
     /// <returns>

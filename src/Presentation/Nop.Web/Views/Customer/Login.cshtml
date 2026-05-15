@@ -116,7 +116,7 @@
                         <div class="mode-switcher" data-mode-root>
                             <button type="button" data-set-mode="email" class="mode-button" id="emailModeBtn">@T("Account.Login.EmailMode")</button>
                             <button type="button" data-set-mode="phone" class="mode-button" id="phoneModeBtn">@T("Account.Login.PhoneMode")</button>
-                            <input asp-for="LoginByPhoneEnabled" id="LoginByPhoneEnabled" class="mode-checkbox" style="display: none;" />
+                            <input asp-for="LoginByPhone" id="LoginByPhone" class="mode-checkbox" style="display: none;" />
                         </div>
                     </div>
                 </form>
@@ -133,7 +133,7 @@
 <script asp-location="Footer">
     $(function() {
 
-        const checkbox = $("#LoginByPhoneEnabled");
+        const checkbox = $("#LoginByPhone");
         const root = $("[data-mode-root]");
 
         function applyMode() {

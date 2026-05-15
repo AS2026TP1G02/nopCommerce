@@ -18,4 +18,6 @@ public record PhoneVerificationModel : BaseNopModel
     public string Result { get; set; }
 
     public PhoneVerificationFlowEnum VerificationFlow { get; set; }
+
+    public bool UsePopupNotifications { get; set; }
 }

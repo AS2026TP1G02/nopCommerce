@@ -16,7 +16,7 @@ public partial record LoginModel : BaseNopModel
 
     public bool UsernamesEnabled { get; set; }
 
-    public bool LoginByPhoneEnabled { get; set; }
+    public bool LoginByPhone { get; set; }
 
     [DataType(DataType.PhoneNumber)]
     [NopResourceDisplayName("Account.Login.Fields.Phone")]

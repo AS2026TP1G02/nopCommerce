@@ -38,6 +38,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-01 — Integrate outbox/trace branch with develop: build fixes, tests, full E2E smoke
+
+**Phase**: 2 + 5 (verification/fixup of the 2026-05-30 outbox work).
+**Driver**: QA-5 (order→outbox, no synchronous external HTTP on checkout), QA-3 (OrderGuid traceability); fixup of the unverified 2026-05-30 entry.
+**Files**: merged `origin/develop` into `feat/outbox-order-placement-and-status-updates` (kept the branch's superset `OmnichannelCoreDefaults.cs` + `OrderPlacedOutboxConsumer.cs` over develop's "fixing compose" additions); `OmnichannelCorePlugin.cs` (+`using Nop.Services.Helpers;`), `OmnichannelCoreService.cs` (+3 OrderGuid trace read methods), `OrderPlacedOutboxConsumer.cs` (+`using Nop.Services.Events;`); `nopCommerce/src/Tests/Nop.Tests/Nop.Plugin.Misc.OmnichannelCore.Tests/**` + `Nop.Tests.csproj`.
+**Change**: Brought the outbox/fulfillment/trace branch up to date with develop and made it actually build on .NET 10. The 2026-05-30 work was committed unverified and had three compile defects: missing `using Nop.Services.Events;` (IConsumer) and `using Nop.Services.Helpers;` (IWebHelper), and a Phase-5 Trace action that called three `OmnichannelCoreService` read methods that were never implemented (now added). Added unit/controller tests for `OmniFulfillmentService` and the fulfillment callback.
+**Tradeoff/risk introduced**: Infra finding (not plugin code): nopCommerce's task scheduler self-POSTs to `http://localhost:8080/scheduletask/runtask`, but the container listens on :80 (compose maps host 8080→80) → scheduled tasks never auto-fire in compose. Worked around by triggering the publisher manually; for the demo, run tasks via admin "Run now" or fix the scheduler base URL / container port (Diogu's compose lane).
+**Verification**: Plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` with 0 errors; `dotnet test --filter ~OmnichannelCore` → 5/5 passed. Full live `docker compose up --build` (6/6 containers healthy): order placed (OrderId 6, OrderGuid `892cee56-…`) → `OmniOutboxMessage` Pending→Published (publisher confirms, no error) → RabbitMQ → worker → WMS sim (accepted, `WMS-REQ-6`) → fulfillment callback POST → HTTP 200 → `OmniOrderFulfillment` Accepted + `OmniInboxMessage` Processed; all three artifacts linkable by OrderGuid (QA-3). Local only — not pushed.
+
 ## 2026-05-30 — Phase 2 async spine + Phase 5 admin trace (outbox track)
 
 **Phase**: 2 (outbox/async path) and 5 (traceability).

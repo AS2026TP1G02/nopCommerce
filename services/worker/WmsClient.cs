@@ -80,8 +80,8 @@ public sealed class WmsClient
         catch (Polly.CircuitBreaker.BrokenCircuitException)
         {
             _logger.LogWarning(
-                "Circuit breaker open, marking fulfillment pending order_guid={OrderGuid}",
-                order.OrderGuid);
+                "Circuit breaker open, marking fulfillment pending order_guid={OrderGuid} message_id={MessageId}",
+                order.OrderGuid, message.MessageId);
 
             return new FulfillmentStatusChanged
             {

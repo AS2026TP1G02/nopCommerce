@@ -84,10 +84,12 @@ public sealed class OrderPlacedConsumer : BackgroundService
     private async Task OnMessageAsync(object sender, BasicDeliverEventArgs args)
     {
         var channel = _channel!;
+        IntegrationMessage<CommerceOrderPlaced>? message = null;
+        
         try
         {
             var json = Encoding.UTF8.GetString(args.Body.Span);
-            var message = JsonSerializer.Deserialize<IntegrationMessage<CommerceOrderPlaced>>(json, JsonOptions)
+            message = JsonSerializer.Deserialize<IntegrationMessage<CommerceOrderPlaced>>(json, JsonOptions)
                           ?? throw new InvalidOperationException("Unparseable order.placed message");
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
@@ -99,7 +101,16 @@ public sealed class OrderPlacedConsumer : BackgroundService
         catch (Exception exception)
         {
             // requeue:false → routed to DLQ via the queue's dead-letter args.
-            _logger.LogError(exception, "Order.placed handling failed; dead-lettering message");
+            if (message != null)
+            {
+                _logger.LogError(exception,
+                    "Order.placed handling failed; dead-lettering message order_guid={OrderGuid} message_id={MessageId}",
+                    message.Payload.OrderGuid, message.MessageId);
+            }
+            else
+            {
+                _logger.LogError(exception, "Order.placed handling failed; dead-lettering message (unparseable)");
+            }
             await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
         }
     }
@@ -129,14 +140,14 @@ public sealed class OrderPlacedConsumer : BackgroundService
         if (response.IsSuccessStatusCode)
         {
             _logger.LogInformation(
-                "Posted fulfillment callback order_guid={OrderGuid} message_id={MessageId} status={Status}",
-                fulfillment.OrderGuid, envelope.MessageId, fulfillment.Status);
+                "Posted fulfillment callback order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId} status={Status}",
+                fulfillment.OrderGuid, envelope.MessageId, fulfillment.ExternalRequestId, fulfillment.Status);
         }
         else
         {
             _logger.LogWarning(
-                "Fulfillment callback failed order_guid={OrderGuid} status_code={StatusCode}",
-                fulfillment.OrderGuid, (int)response.StatusCode);
+                "Fulfillment callback failed order_guid={OrderGuid} message_id={MessageId} status_code={StatusCode}",
+                fulfillment.OrderGuid, envelope.MessageId, (int)response.StatusCode);
             throw new HttpRequestException($"Callback returned {response.StatusCode}");
         }
     }

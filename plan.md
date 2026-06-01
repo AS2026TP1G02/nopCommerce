@@ -211,7 +211,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | João Roldão | `[ ]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Admin/`, `.../OmnichannelCore/Controllers/OmnichannelAdminController.cs` |
 | João Varela | `[ ]` Plugin-side structured logs carrying `OrderGuid` + `messageId` + `externalRequestId` | `.../OmnichannelCore/` (cross-cutting) |
-| António | `[ ]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
+| António | `[x]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
 | Diogu | `[ ]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough | `docker-compose.yml`, `docs/setup.md` |
 | João Roldão + António | `[ ]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
 

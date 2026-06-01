@@ -38,6 +38,24 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-01 — POS normal callback smoke evidence
+
+**Phase**: 4.
+**Driver**: QA-2 consistency; ADR-0006 idempotent inbox, ADR-0007 projection-first stock.
+**Files**: `docs/evidence/qa-2-consistency.md`, `journal.md`.
+**Change**: Added the Compose-based POS normal callback smoke command and observed response showing the POS simulator reached the plugin callback, returned HTTP 200, inserted an inbox row, and inserted a stock projection row.
+**Tradeoff/risk introduced**: This verifies only the normal POS callback path; duplicate and stale runtime measurements remain pending.
+**Verification**: `curl -i --max-time 15 -X POST http://localhost:8082/emit -H 'Content-Type: application/json' -d '{"mode":"normal","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":3}'` returned HTTP 200 with `Result=applied`, `InboxId=1`, `StockSyncStateId=1`, `Applied=true`, `Duplicate=false`, `Stale=false`, and `SourceVersion=41`.
+
+## 2026-06-01 — Pair B setup and operability evidence
+
+**Phase**: 2, 3, 5, 6.
+**Driver**: QA-1 resilience/recovery, QA-4 operability; ADR-0004 simulator boundary, ADR-0010 structured-log observability.
+**Files**: `docs/setup.md`, `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `plan.md`, `journal.md`.
+**Change**: Expanded the Compose setup guide with concrete nopCommerce install values, simulator controls, RabbitMQ operator checks, load-test command, baseline threshold and the current plugin E2E blocker. Added the QA-1 pressure-test evidence template and QA-4 operability evidence, including local Compose health, RabbitMQ queue snapshot and WMS mode-toggle outputs.
+**Tradeoff/risk introduced**: QA-1 and final QA-4 remain partial evidence until the plugin publishes outbox rows to RabbitMQ, accepts worker fulfillment callbacks, and exposes pending fulfillment state.
+**Verification**: `docker compose ps` showed `nopcommerce`, `sqlserver`, `rabbitmq`, `worker`, `wms-sim` and `pos-sim` healthy; WMS `/health` and `/mode` returned `normal`; POS `/health` and `/mode` returned `normal`; `rabbitmqctl list_queues` showed `wms.order.placed` and `wms.order.placed.dlq` with `0` messages; WMS mode toggles succeeded for `slow`, `unavailable`, `contradictory` and back to `normal`.
+
 ## 2026-06-01 — QA-2 unit + controller tests for inbox dedup and stock staleness
 
 **Phase**: 4.

@@ -45,6 +45,16 @@ docker run --rm -p 5081:8080 \
 
 ## Normal Update
 
+With the Compose stack, the POS simulator is exposed on port `8082`:
+
+```bash
+curl -i --max-time 15 -X POST http://localhost:8082/emit \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"normal","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":3}'
+```
+
+Standalone simulator command, if running outside Compose:
+
 ```bash
 curl -X POST http://localhost:5081/emit \
   -H "Content-Type: application/json" \
@@ -59,6 +69,26 @@ Expected plugin result inside simulator response:
   "applied": true,
   "duplicate": false,
   "stale": false
+}
+```
+
+Observed Compose smoke on `2026-06-01T23:51:02+01:00` at commit
+`207a628fd1`:
+
+```json
+{
+  "mode": "normal",
+  "target": "http://nopcommerce/omnichannel/callbacks/pos/stock-changed",
+  "results": [
+    {
+      "messageId": "6dffd3d8-0f03-463e-b1c6-aa389b5561a4",
+      "sourceVersion": 41,
+      "quantityOnHand": 3,
+      "statusCode": 200,
+      "success": true,
+      "responseBody": "{\"Result\":\"applied\",\"MessageId\":\"6dffd3d8-0f03-463e-b1c6-aa389b5561a4\",\"CorrelationId\":\"\",\"InboxId\":1,\"StockSyncStateId\":1,\"Applied\":true,\"Duplicate\":false,\"Stale\":false,\"SourceVersion\":41,\"Detail\":\"stock projection inserted\"}"
+    }
+  ]
 }
 ```
 
@@ -156,7 +186,8 @@ Completed on 2026-05-15:
 
 ## QA-2 Status
 
-Current status: **implemented, runtime measurement pending**.
+Current status: **implemented; normal POS callback smoke verified; duplicate and
+stale runtime measurements pending**.
 
 The runtime evidence to capture during demo rehearsal is:
 

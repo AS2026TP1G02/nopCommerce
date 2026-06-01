@@ -9,10 +9,9 @@ namespace Omnichannel.Worker;
 /// Calls the WMS simulator's POST /fulfillments and maps the response to a
 /// <see cref="FulfillmentStatusChanged"/> payload. The WMS call is wrapped in
 /// the retry + circuit-breaker pipeline so the worker degrades gracefully when
-/// the WMS is slow/unavailable (QA-1).
-///
-/// SCAFFOLD: the happy path is implemented; degraded mapping (breaker-open →
-/// status "pending"/"degraded") is stubbed and must be finished in Phase 3.
+/// the WMS is slow/unavailable (QA-1). When the circuit breaker opens, returns
+/// status "pending" instead of throwing, allowing the order to be acknowledged
+/// and the callback to proceed with degraded state.
 /// </summary>
 public sealed class WmsClient
 {
@@ -56,25 +55,42 @@ public sealed class WmsClient
             })
         };
 
-        var response = await _pipeline.ExecuteAsync(async ct =>
+        try
         {
-            var http = await _httpClient.PostAsJsonAsync(_options.WmsFulfillmentPath, wmsRequest, ct);
-            http.EnsureSuccessStatusCode();
-            return await http.Content.ReadFromJsonAsync<WmsFulfillmentResponse>(ct)
-                   ?? throw new InvalidOperationException("Empty WMS response");
-        }, cancellationToken);
+            var response = await _pipeline.ExecuteAsync(async ct =>
+            {
+                var http = await _httpClient.PostAsJsonAsync(_options.WmsFulfillmentPath, wmsRequest, ct);
+                http.EnsureSuccessStatusCode();
+                return await http.Content.ReadFromJsonAsync<WmsFulfillmentResponse>(ct)
+                       ?? throw new InvalidOperationException("Empty WMS response");
+            }, cancellationToken);
 
-        _logger.LogInformation(
-            "WMS accepted order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId}",
-            order.OrderGuid, message.MessageId, response.ExternalRequestId);
+            _logger.LogInformation(
+                "WMS accepted order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId}",
+                order.OrderGuid, message.MessageId, response.ExternalRequestId);
 
-        return new FulfillmentStatusChanged
+            return new FulfillmentStatusChanged
+            {
+                OrderGuid = order.OrderGuid,
+                ExternalRequestId = response.ExternalRequestId,
+                Status = response.Status,
+                Reason = null
+            };
+        }
+        catch (Polly.CircuitBreaker.BrokenCircuitException)
         {
-            OrderGuid = order.OrderGuid,
-            ExternalRequestId = response.ExternalRequestId,
-            Status = response.Status,
-            Reason = null
-        };
+            _logger.LogWarning(
+                "Circuit breaker open, marking fulfillment pending order_guid={OrderGuid}",
+                order.OrderGuid);
+
+            return new FulfillmentStatusChanged
+            {
+                OrderGuid = order.OrderGuid,
+                ExternalRequestId = string.Empty,
+                Status = "pending",
+                Reason = "WMS unavailable - circuit breaker open"
+            };
+        }
     }
 
     private sealed record WmsFulfillmentResponse

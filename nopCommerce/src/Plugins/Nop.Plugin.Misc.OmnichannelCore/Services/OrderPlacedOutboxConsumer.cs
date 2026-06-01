@@ -2,6 +2,7 @@ using Nop.Core.Domain.Orders;
 using Nop.Core.Events;
 using Nop.Data;
 using Nop.Plugin.Misc.OmnichannelCore.Domains;
+using Nop.Services.Events;
 using Nop.Services.Logging;
 
 namespace Nop.Plugin.Misc.OmnichannelCore.Services;

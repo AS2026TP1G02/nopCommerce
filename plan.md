@@ -92,8 +92,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Varela | `[x]` POS simulator scaffold (HTTP server, mode placeholder) | `services/pos-sim/` (new) |
 | António | `[ ]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
 | António | `[ ]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
-| Diogu | `[ ]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
-| Diogu | `[ ]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
+| Diogu | `[x]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
+| Diogu | `[x]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
 | Diogu | `[ ]` `docs/setup.md` skeleton with section headers + Phase markers | `docs/setup.md` |
 | Diogu | `[ ]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
 
@@ -104,7 +104,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 - `docs/evidence/baseline.md` exists with P50/P95 numbers and the storefront URL used.
 - ADR-0011 exists; ADR-0005 has the demo-token bullet.
 
-**Phase 1 progress (as of 2026-05-14)** — done by Varela on `feat/phase-1-omnichannel-plugin-scaffold` (merged): plugin scaffold, four-table migration, admin shell. **Remaining**: ADR-0011, ADR-0005 demo-token note, POS sim scaffold, worker scaffold + RabbitMQ topology design, WMS sim scaffold, Docker Compose v1, `docs/setup.md` skeleton, baseline measurement, uninstall DB validation.
+**Phase 1 progress (as of 2026-05-14)** — Varela completed the plugin scaffold, four-table migration, and admin shell on `feat/phase-1-omnichannel-plugin-scaffold` (merged). Diogu completed Docker Compose v1 (`docker compose up` starts every service with healthchecks green). **Remaining**: ADR-0011, ADR-0005 demo-token note, POS sim scaffold, worker scaffold + RabbitMQ topology design, WMS sim scaffold, `docs/setup.md` skeleton, baseline measurement, uninstall DB validation.
 
 **Risks**
 
@@ -127,7 +127,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
 | António | `[ ]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[ ]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
-| Diogu | `[ ]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
+| Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
 | Diogu | `[ ]` Docker Compose stitches everything end-to-end | `docker-compose.yml` |
 | Diogu | `[ ]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
 | João Roldão + António | `[ ]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` |
@@ -155,7 +155,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| Diogu | `[ ]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
+| Diogu | `[x]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
 | António | `[ ]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/` |
 | António | `[ ]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[ ]` Dead-letter queue + handler for poison messages | `services/worker/` |

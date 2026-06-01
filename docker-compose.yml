@@ -1,13 +1,5 @@
-# Full omnichannel demo stack for Scenario C.
-#
-# Phase 1 goal for Compose: every container starts, exposes its intended port,
-# and reports healthy without requiring service-specific manual steps beyond the
-# nopCommerce install wizard. End-to-end behavior is filled incrementally in
-# later phases.
-#
-# Bring up:   docker compose up --build
-# Storefront: http://localhost:8080
-# RabbitMQ UI: http://localhost:15672 (guest/guest)
+# Omnichannel demo stack (Scenario C).
+# Up: docker compose up --build  |  Storefront: http://localhost:8080  |  RabbitMQ UI: http://localhost:15672 (guest/guest)
 
 services:
   sqlserver:
@@ -57,8 +49,14 @@ services:
       context: ./nopCommerce
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      # Match the store-URL port (8080) the task scheduler self-calls; on :80 it was refused.
+      ASPNETCORE_URLS: http://+:8080
     ports:
-      - "8080:80"
+      - "8080:8080"
+    volumes:
+      # Persist install state (connection string, plugins.json) across recreates.
+      - nopcommerce_appdata:/app/App_Data
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -66,7 +64,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -q --spider http://localhost/install || wget -q --spider http://localhost/"
+          "wget -q --spider http://localhost:8080/install || wget -q --spider http://localhost:8080/"
         ]
       interval: 15s
       timeout: 10s
@@ -98,7 +96,7 @@ services:
       context: ./services/pos-sim
     restart: unless-stopped
     environment:
-      NopCommerce__BaseUrl: http://nopcommerce:80
+      NopCommerce__BaseUrl: http://nopcommerce:8080
       OmnichannelCore__DemoToken: omni-demo-token
     ports:
       - "8082:8080"
@@ -126,7 +124,7 @@ services:
     environment:
       Worker__RabbitMqUri: amqp://guest:guest@rabbitmq:5672/
       Worker__WmsBaseUrl: http://wms-sim:8080
-      Worker__NopCommerceBaseUrl: http://nopcommerce:80
+      Worker__NopCommerceBaseUrl: http://nopcommerce:8080
       Worker__DemoToken: omni-demo-token
     depends_on:
       rabbitmq:
@@ -150,3 +148,4 @@ networks:
 
 volumes:
   mssql_data:
+  nopcommerce_appdata:

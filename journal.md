@@ -38,6 +38,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-01 — Fix compose so scheduled tasks auto-fire + install persists
+
+**Phase**: fixup (infra; resolves the scheduler-port risk flagged in the entry below).
+**Driver**: QA-5 (outbox auto-publishes on schedule, no manual trigger) and operability.
+**Files**: `docker-compose.yml` — `nopcommerce` now sets `ASPNETCORE_URLS=http://+:8080`, maps `8080:8080`, healthcheck on `:8080`, and mounts a new `nopcommerce_appdata` volume at `/app/App_Data`; `worker`/`pos-sim` base URLs → `http://nopcommerce:8080`.
+**Change**: (1) Aligned the container's listening port to 8080 so it matches the store URL (`http://localhost:8080`, set at install) that `TaskScheduler.cs` uses for its self-POST to `/scheduletask/runtask` — Kestrel was on :80, so the self-call was refused and scheduled tasks never auto-fired. (2) Added a persistent `App_Data` volume so recreating the container no longer drops the install marker (`appsettings.json` connection string + `plugins.json`) while the SQL DB stays populated — that mismatch caused "Sequence contains more than one element" when the install wizard re-ran against a populated DB.
+**Tradeoff/risk introduced**: One-time `docker compose down -v` was needed to clear the half-installed state created before the volume existed (Diogu's compose lane — note for fresh clones: install state now persists in the `nopcommerce_appdata` volume).
+**Verification**: `docker compose up` (6/6 healthy); placed an order and waited — outbox auto-published on the 60 s scheduler tick (`/scheduletask/runtask` → HTTP 204, `ScheduleTask.LastStartUtc` now advances; previously NULL with `Connection refused`) → worker → WMS → `OmniOrderFulfillment` Accepted + inbox Processed, all linked by OrderGuid `93fd84e7-…`, with NO manual task trigger. Install survives container recreate. Local only — not pushed.
+
 ## 2026-06-01 — Integrate outbox/trace branch with develop: build fixes, tests, full E2E smoke
 
 **Phase**: 2 + 5 (verification/fixup of the 2026-05-30 outbox work).

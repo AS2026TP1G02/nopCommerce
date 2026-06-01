@@ -108,9 +108,12 @@ public class OmnichannelCallbackFulfillmentTests
             EventType = OmnichannelCoreDefaults.FulfillmentStatusChangedEventType,
             OccurredOnUtc = DateTime.UtcNow,
             Source = "worker",
-            OrderGuid = orderGuid,
-            ExternalRequestId = "wms-req-1",
-            Status = status
+            Payload = new FulfillmentStatusChangedPayload
+            {
+                OrderGuid = orderGuid,
+                ExternalRequestId = "wms-req-1",
+                Status = status
+            }
         };
     }
 

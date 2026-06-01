@@ -63,10 +63,13 @@ public class OmniFulfillmentServiceTests
             EventType = OmnichannelCoreDefaults.FulfillmentStatusChangedEventType,
             OccurredOnUtc = DateTime.UtcNow,
             Source = "worker",
-            OrderGuid = orderGuid,
-            ExternalRequestId = "wms-req-1",
-            Status = status,
-            TrackingNumber = "TRACK-1"
+            Payload = new FulfillmentStatusChangedPayload
+            {
+                OrderGuid = orderGuid,
+                ExternalRequestId = "wms-req-1",
+                Status = status,
+                TrackingNumber = "TRACK-1"
+            }
         };
     }
 }

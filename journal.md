@@ -56,6 +56,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Tradeoff/risk introduced**: Infra finding (not plugin code): nopCommerce's task scheduler self-POSTs to `http://localhost:8080/scheduletask/runtask`, but the container listens on :80 (compose maps host 8080→80) → scheduled tasks never auto-fire in compose. Worked around by triggering the publisher manually; for the demo, run tasks via admin "Run now" or fix the scheduler base URL / container port (Diogu's compose lane).
 **Verification**: Plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` with 0 errors; `dotnet test --filter ~OmnichannelCore` → 5/5 passed. Full live `docker compose up --build` (6/6 containers healthy): order placed (OrderId 6, OrderGuid `892cee56-…`) → `OmniOutboxMessage` Pending→Published (publisher confirms, no error) → RabbitMQ → worker → WMS sim (accepted, `WMS-REQ-6`) → fulfillment callback POST → HTTP 200 → `OmniOrderFulfillment` Accepted + `OmniInboxMessage` Processed; all three artifacts linkable by OrderGuid (QA-3). Local only — not pushed.
 
+## 2026-06-01 — QA-2 unit + controller tests for inbox dedup and stock staleness
+
+**Phase**: 4.
+**Driver**: QA-2 consistency (duplicate `messageId` rejected; stale `sourceVersion` ignored; legitimate update applied).
+**Files**: `nopCommerce/src/Tests/Nop.Tests/Nop.Plugin.Misc.OmnichannelCore.Tests/{InMemoryRepository,OmniInboxServiceTests,OmniStockSyncServiceTests,OmnichannelCallbackControllerTests}.cs`, `nopCommerce/src/Tests/Nop.Tests/Nop.Tests.csproj`, `plan.md`.
+**Change**: Added the QA-2 test suite — `OmniInboxService` dedup, `OmniStockSyncService` newer-vs-stale `sourceVersion` projection, and `OmnichannelCallbackController` happy/duplicate/stale/unauthorized paths — backed by an in-memory `IRepository<T>` double; linked the plugin sources into `Nop.Tests` via `<Compile Include>` since the plugin is not a normal project reference. Ported from the `feat/qa2-inbox-pos-consistency` branch and adapted to the implementation already on `develop` (which superseded the branch's parallel reimplementation via the repo reorganization).
+**Tradeoff/risk introduced**: Tests exercise the services/controller directly with an in-memory repository (no LinqToDB provider), so they validate logic, not SQL translation or the missing `OmniInboxMessage.MessageId` unique constraint (residual race noted in the 2026-05-15 entry).
+**Verification**: `dotnet test nopCommerce/src/Tests/Nop.Tests/Nop.Tests.csproj --filter FullyQualifiedName~OmnichannelCore` (run in the `mcr.microsoft.com/dotnet/sdk:10.0` container, since the host has only the .NET 9 SDK while `global.json` pins 10.0.100) — full Nop.Web build succeeded, **7/7 tests passed** in ~1.5 s, including the duplicate-rejection ≤50 ms QA-2 threshold check.
+
 ## 2026-05-30 — Phase 2 async spine + Phase 5 admin trace (outbox track)
 
 **Phase**: 2 (outbox/async path) and 5 (traceability).

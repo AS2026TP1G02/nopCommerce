@@ -137,7 +137,7 @@ public class OmnichannelCallbackController : Controller
             EventType = request.EventType,
             CorrelationId = request.CorrelationId,
             Source = request.Source,
-            OrderGuid = request.OrderGuid
+            OrderGuid = request.Payload.OrderGuid
         });
 
         if (inboxResult.IsDuplicate)
@@ -165,7 +165,7 @@ public class OmnichannelCallbackController : Controller
                 InboxId = inboxResult.InboxMessage.Id,
                 Applied = true,
                 Duplicate = false,
-                Detail = $"fulfillment {fulfillment.Status} for order {request.OrderGuid}"
+                Detail = $"fulfillment {fulfillment.Status} for order {request.Payload.OrderGuid}"
             });
         }
         catch (Exception exception)
@@ -237,10 +237,13 @@ public class OmnichannelCallbackController : Controller
         if (!string.Equals(request.EventType, OmnichannelCoreDefaults.FulfillmentStatusChangedEventType, StringComparison.Ordinal))
             return $"eventType must be {OmnichannelCoreDefaults.FulfillmentStatusChangedEventType}";
 
-        if (request.OrderGuid == Guid.Empty)
+        if (request.Payload == null)
+            return "payload is required";
+
+        if (request.Payload.OrderGuid == Guid.Empty)
             return "orderGuid is required";
 
-        if (string.IsNullOrWhiteSpace(request.Status))
+        if (string.IsNullOrWhiteSpace(request.Payload.Status))
             return "status is required";
 
         return null;

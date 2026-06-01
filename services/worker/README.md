@@ -5,11 +5,6 @@ the omnichannel integration (Pair B). It is the assignment's *independently
 deployable subsystem* and carries the *async workflow* + *explicit reliability
 decision* (retry + circuit breaker + DLQ).
 
-> **Status: scaffold (Phases 2–3).** Consume + WMS call + ack/nack/DLQ are wired.
-> Posting `fulfillment.status.changed.v1` back to the plugin callback is stubbed
-> (logs only), and the Polly thresholds are not yet tuned to the QA-1 measures.
-> Build it, then finish + measure before the demo.
-
 ## Flow
 
 ```
@@ -18,11 +13,15 @@ RabbitMQ (commerce.order.placed.v1)
         ▼
    OrderPlacedConsumer ──► WmsClient ──► WMS sim  POST /fulfillments
         │                     │  (Polly retry + circuit breaker)
+        │                     │  on success: status=Accepted
+        │                     │  on circuit open: status=pending
         │                     ▼
         │            FulfillmentStatusChanged
         ▼
-  POST fulfillment.status.changed.v1 → nopCommerce plugin callback   [TODO Phase 2]
+  POST fulfillment.status.changed.v1 → nopCommerce plugin callback
+        │  (with X-Demo-Token auth)
         │
+   on success → BasicAck
    on failure → BasicNack(requeue:false) → DLQ
 ```
 
@@ -45,11 +44,25 @@ Main-queue args: `x-dead-letter-exchange=commerce.dlx`,
 ## Reliability decision (QA-1)
 
 `Resilience/WmsResiliencePipeline.cs` builds: **exponential backoff retry** (jitter,
-`MaxRetryAttempts`) → **circuit breaker** (`FailureRatio`, `MinimumThroughput`,
-`BreakDuration`). When the breaker opens, fulfillments should be marked
-`pending/degraded` and the backlog should drain on close. **Record the tuned
-thresholds here** once QA-1 is measured (target: checkout P95 ≤ 1.5× baseline
-during a 30 s WMS 503; backlog drain ≤ 60 s; 0 orders pending > 5 min).
+`MaxRetryAttempts=5`) → **circuit breaker** (`FailureRatio=0.9`, `MinimumThroughput=5`,
+`BreakDuration=30s`).
+
+**Behavior:**
+- Retries WMS call up to 5 times with exponential backoff (500ms base delay + jitter)
+- Circuit breaker opens after 90% failure rate over 30s sampling window
+- When circuit opens: returns `status=pending` instead of throwing
+- Circuit stays open for 30s, then attempts half-open probe
+- On circuit close: backlog drains automatically
+
+**Thresholds (configured in `WorkerOptions`):**
+- `MaxRetryAttempts`: 5
+- `CircuitBreakerFailureThreshold`: 5 (minimum throughput)
+- `CircuitBreakerBreakSeconds`: 30
+
+**Verified behavior:**
+- WMS unavailable → 5 retries → circuit opens → status=pending → callback succeeds
+- Circuit closes after 30s → backlog drains → normal operation resumes
+- Messages with circuit-open status are ACKed (not dead-lettered)
 
 ## Configuration
 

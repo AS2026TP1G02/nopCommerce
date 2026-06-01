@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Omnichannel.Contracts;
@@ -8,23 +9,18 @@ namespace Omnichannel.Worker;
 
 /// <summary>
 /// Background service: consumes <c>commerce.order.placed.v1</c> from RabbitMQ,
-/// calls the WMS via <see cref="WmsClient"/>, and (Phase 2) posts
+/// calls the WMS via <see cref="WmsClient"/>, and posts
 /// <c>fulfillment.status.changed.v1</c> back to the plugin callback.
 ///
 /// Declares the topology in <see cref="Topology"/> (idempotent), including the
 /// dead-letter exchange/queue so poison messages land in the DLQ instead of
 /// looping. This is the async workflow + DLQ reliability decision the assignment
 /// requires.
-///
-/// SCAFFOLD: consume + WMS call + ack/nack are wired. Posting the result back to
-/// the plugin callback is stubbed (logs only) and must be completed in Phase 2,
-/// together with the plugin-side callback for fulfillment status.
 /// </summary>
 public sealed class OrderPlacedConsumer : BackgroundService
 {
     private readonly WorkerOptions _options;
     private readonly WmsClient _wmsClient;
-    private readonly NopCallbackClient _nopCallbackClient;
     private readonly ILogger<OrderPlacedConsumer> _logger;
 
     private IConnection? _connection;
@@ -32,14 +28,10 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public OrderPlacedConsumer(WorkerOptions options,
-        WmsClient wmsClient,
-        NopCallbackClient nopCallbackClient,
-        ILogger<OrderPlacedConsumer> logger)
+    public OrderPlacedConsumer(WorkerOptions options, WmsClient wmsClient, ILogger<OrderPlacedConsumer> logger)
     {
         _options = options;
         _wmsClient = wmsClient;
-        _nopCallbackClient = nopCallbackClient;
         _logger = logger;
     }
 
@@ -92,23 +84,71 @@ public sealed class OrderPlacedConsumer : BackgroundService
     private async Task OnMessageAsync(object sender, BasicDeliverEventArgs args)
     {
         var channel = _channel!;
+        IntegrationMessage<CommerceOrderPlaced>? message = null;
+        
         try
         {
             var json = Encoding.UTF8.GetString(args.Body.Span);
-            var message = JsonSerializer.Deserialize<CommerceOrderPlacedMessage>(json, JsonOptions)
+            message = JsonSerializer.Deserialize<IntegrationMessage<CommerceOrderPlaced>>(json, JsonOptions)
                           ?? throw new InvalidOperationException("Unparseable order.placed message");
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
-            await _nopCallbackClient.PostFulfillmentStatusAsync(fulfillment, CancellationToken.None);
+            await PostFulfillmentCallbackAsync(message, fulfillment, CancellationToken.None);
 
             await channel.BasicAckAsync(args.DeliveryTag, multiple: false);
         }
         catch (Exception exception)
         {
             // requeue:false → routed to DLQ via the queue's dead-letter args.
-            _logger.LogError(exception, "Order.placed handling failed; dead-lettering message");
+            if (message != null)
+            {
+                _logger.LogError(exception,
+                    "Order.placed handling failed; dead-lettering message order_guid={OrderGuid} message_id={MessageId}",
+                    message.Payload.OrderGuid, message.MessageId);
+            }
+            else
+            {
+                _logger.LogError(exception, "Order.placed handling failed; dead-lettering message (unparseable)");
+            }
             await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
+        }
+    }
+
+    private async Task PostFulfillmentCallbackAsync(
+        IntegrationMessage<CommerceOrderPlaced> orderMessage,
+        FulfillmentStatusChanged fulfillment,
+        CancellationToken cancellationToken)
+    {
+        var callbackUrl = $"{_options.NopCommerceBaseUrl.TrimEnd('/')}/omnichannel/callbacks/fulfillment/status-changed";
+
+        var envelope = new IntegrationMessage<FulfillmentStatusChanged>
+        {
+            MessageId = Guid.NewGuid(),
+            CorrelationId = orderMessage.CorrelationId,
+            EventType = EventTypes.FulfillmentStatusChanged,
+            OccurredOnUtc = DateTime.UtcNow,
+            Source = "worker",
+            Payload = fulfillment
+        };
+
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("X-Demo-Token", _options.DemoToken);
+
+        var response = await httpClient.PostAsJsonAsync(callbackUrl, envelope, cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _logger.LogInformation(
+                "Posted fulfillment callback order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId} status={Status}",
+                fulfillment.OrderGuid, envelope.MessageId, fulfillment.ExternalRequestId, fulfillment.Status);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Fulfillment callback failed order_guid={OrderGuid} message_id={MessageId} status_code={StatusCode}",
+                fulfillment.OrderGuid, envelope.MessageId, (int)response.StatusCode);
+            throw new HttpRequestException($"Callback returned {response.StatusCode}");
         }
     }
 

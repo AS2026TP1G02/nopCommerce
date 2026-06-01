@@ -90,12 +90,12 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[ ]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
 | João Varela | `[x]` Admin view shells (empty MVC controller + view skeleton) | `.../OmnichannelCore/Controllers/`, `.../Views/` |
 | João Varela | `[x]` POS simulator scaffold (HTTP server, mode placeholder) | `services/pos-sim/` (new) |
-| António | `[ ]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
-| António | `[ ]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
+| António | `[x]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
+| António | `[x]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
 | Diogu | `[x]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
 | Diogu | `[x]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
 | Diogu | `[ ]` `docs/setup.md` skeleton with section headers + Phase markers | `docs/setup.md` |
-| Diogu | `[ ]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
+| Diogu | `[x]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
 
 **Verification gate** (Sun 17 May)
 
@@ -125,8 +125,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[ ]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
 | João Roldão | `[ ]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
 | João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
-| António | `[ ]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
-| António | `[ ]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
+| António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
+| António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
 | Diogu | `[ ]` Docker Compose stitches everything end-to-end | `docker-compose.yml` |
 | Diogu | `[ ]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
@@ -157,9 +157,9 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | Diogu | `[x]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
 | António | `[ ]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/` |
-| António | `[ ]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
-| António | `[ ]` Dead-letter queue + handler for poison messages | `services/worker/` |
-| António | `[ ]` Backlog drain on circuit-breaker close | `services/worker/` |
+| António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
+| António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
+| António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
 | Diogu | `[ ]` Pressure-test harness: toggle WMS to `unavailable` for 30 s, capture P95 + recovery time + orders-pending count | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
@@ -188,7 +188,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Varela | `[x]` POS callback endpoint | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
 | João Varela | `[x]` POS sim `duplicate` and `stale` modes | `services/pos-sim/` |
 | João Roldão | `[x]` Plugin integration: connect POS callback into the inbox + stock projection paths | `.../OmnichannelCore/` |
-| João Varela | `[ ]` Unit tests for `messageId` dedup and `sourceVersion` staleness; e2e: duplicate ignored, stale ignored, legitimate update applied | `tests/` or `.../OmnichannelCore/Tests/`; evidence in `docs/evidence/qa-2-consistency.md` |
+| João Varela | `[x]` Unit tests for `messageId` dedup and `sourceVersion` staleness; e2e: duplicate ignored, stale ignored, legitimate update applied | `nopCommerce/src/Tests/Nop.Tests/Nop.Plugin.Misc.OmnichannelCore.Tests/`; evidence in `docs/evidence/qa-2-consistency.md` |
 
 **Verification gate** (Wed 27 May)
 
@@ -211,7 +211,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | João Roldão | `[ ]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Admin/`, `.../OmnichannelCore/Controllers/OmnichannelAdminController.cs` |
 | João Varela | `[ ]` Plugin-side structured logs carrying `OrderGuid` + `messageId` + `externalRequestId` | `.../OmnichannelCore/` (cross-cutting) |
-| António | `[ ]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
+| António | `[x]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
 | Diogu | `[ ]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough | `docker-compose.yml`, `docs/setup.md` |
 | João Roldão + António | `[ ]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
 

@@ -41,22 +41,24 @@ public class OmniFulfillmentService
     /// <returns>A task that resolves to the updated fulfillment row</returns>
     public virtual async Task<OmniOrderFulfillment> ApplyFulfillmentStatusChangedAsync(FulfillmentStatusChangedRequest request)
     {
-        var status = MapStatus(request.Status);
+        var payload = request.Payload;
+        var orderGuid = payload.OrderGuid;
+        var status = MapStatus(payload.Status);
         var now = DateTime.UtcNow;
 
         var fulfillment = await _orderFulfillmentRepository.Table
-            .FirstOrDefaultAsync(record => record.OrderGuid == request.OrderGuid);
+            .FirstOrDefaultAsync(record => record.OrderGuid == orderGuid);
 
         if (fulfillment == null)
         {
             fulfillment = new OmniOrderFulfillment
             {
-                OrderGuid = request.OrderGuid,
+                OrderGuid = orderGuid,
                 MessageId = request.MessageId,
                 CorrelationId = request.CorrelationId,
-                ExternalRequestId = request.ExternalRequestId,
-                TrackingNumber = request.TrackingNumber,
-                Reason = request.Reason,
+                ExternalRequestId = payload.ExternalRequestId,
+                TrackingNumber = payload.TrackingNumber,
+                Reason = payload.Reason,
                 Status = status,
                 CreatedOnUtc = now,
                 UpdatedOnUtc = now,
@@ -68,16 +70,16 @@ public class OmniFulfillmentService
 
             // ADR-0008: 3-ID structured trace on every integration-path write.
             await _logger.InformationAsync(
-                $"OmnichannelCore fulfillment created order_guid={request.OrderGuid} message_id={request.MessageId} external_request_id={request.ExternalRequestId} status={status}");
+                $"OmnichannelCore fulfillment created order_guid={orderGuid} message_id={request.MessageId} external_request_id={payload.ExternalRequestId} status={status}");
 
             return fulfillment;
         }
 
         fulfillment.MessageId = request.MessageId;
         fulfillment.CorrelationId = request.CorrelationId;
-        fulfillment.ExternalRequestId = request.ExternalRequestId;
-        fulfillment.TrackingNumber = request.TrackingNumber;
-        fulfillment.Reason = request.Reason;
+        fulfillment.ExternalRequestId = payload.ExternalRequestId;
+        fulfillment.TrackingNumber = payload.TrackingNumber;
+        fulfillment.Reason = payload.Reason;
         fulfillment.Status = status;
         fulfillment.UpdatedOnUtc = now;
 
@@ -90,7 +92,7 @@ public class OmniFulfillmentService
 
         // ADR-0008: 3-ID structured trace on every integration-path write.
         await _logger.InformationAsync(
-            $"OmnichannelCore fulfillment updated order_guid={request.OrderGuid} message_id={request.MessageId} external_request_id={request.ExternalRequestId} status={status}");
+            $"OmnichannelCore fulfillment updated order_guid={orderGuid} message_id={request.MessageId} external_request_id={payload.ExternalRequestId} status={status}");
 
         return fulfillment;
     }

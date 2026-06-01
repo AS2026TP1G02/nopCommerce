@@ -8,12 +8,13 @@ namespace Nop.Plugin.Misc.OmnichannelCore.Services;
 
 /// <summary>
 /// Builds <see cref="OmniOutboxMessage"/> rows for the <c>commerce.order.placed.v1</c>
-/// event. Single source of truth for the FLAT wire payload so the
+/// event. Single source of truth for the wire payload so the
 /// <see cref="OrderPlacedOutboxConsumer"/> (fast path) and the
 /// <c>OutboxReconcilerTask</c> (ADR-0011 crash safety net) cannot drift on shape.
 ///
-/// Payload mirrors docs/evidence/sample-commerce-order-placed-v1.json and
-/// services/contracts Events.cs (CommerceOrderPlacedMessage).
+/// Emits the shared envelope contract the worker consumes
+/// (services/contracts <c>IntegrationMessage&lt;CommerceOrderPlaced&gt;</c>): envelope
+/// fields plus a nested <c>payload</c>. Mirrors docs/evidence/sample-commerce-order-placed-v1.json.
 /// </summary>
 public class OutboxMessageFactory
 {
@@ -49,20 +50,20 @@ public class OutboxMessageFactory
         var messageId = Guid.NewGuid();
         var correlationId = order.OrderGuid.ToString("D");
 
-        var items = new List<object>();
+        var lines = new List<object>();
         foreach (var orderItem in await _orderService.GetOrderItemsAsync(order.Id))
         {
             var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
-            items.Add(new
+            lines.Add(new
             {
-                orderItemId = orderItem.Id,
                 productId = orderItem.ProductId,
                 sku = product?.Sku ?? string.Empty,
                 quantity = orderItem.Quantity,
-                warehouseId = product?.WarehouseId ?? 0
+                unitPrice = orderItem.UnitPriceInclTax
             });
         }
 
+        // Envelope + nested payload = services/contracts IntegrationMessage<CommerceOrderPlaced>.
         var payload = JsonSerializer.Serialize(new
         {
             messageId,
@@ -70,10 +71,16 @@ public class OutboxMessageFactory
             eventType = OmnichannelCoreDefaults.OrderPlacedEventType,
             occurredOnUtc = now,
             source = OmnichannelCoreDefaults.SourceName,
-            orderGuid = order.OrderGuid,
-            orderId = order.Id,
-            storeId = order.StoreId,
-            items
+            payload = new
+            {
+                orderId = order.Id,
+                orderGuid = order.OrderGuid,
+                storeId = order.StoreId,
+                customerId = order.CustomerId,
+                currency = string.IsNullOrEmpty(order.CustomerCurrencyCode) ? "EUR" : order.CustomerCurrencyCode,
+                totalAmount = order.OrderTotal,
+                lines
+            }
         }, _jsonOptions);
 
         return new OmniOutboxMessage

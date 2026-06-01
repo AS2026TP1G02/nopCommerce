@@ -52,7 +52,7 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Phase**: 2, 3, 5, 6.
 **Driver**: QA-1 resilience/recovery, QA-4 operability; ADR-0004 simulator boundary, ADR-0010 structured-log observability.
 **Files**: `docs/setup.md`, `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `plan.md`, `journal.md`.
-**Change**: Expanded the Compose setup guide with concrete nopCommerce install values, simulator controls, RabbitMQ operator checks, load-test command, baseline threshold and the current plugin E2E blocker. Added the QA-1 pressure-test evidence template and QA-4 operability evidence, including local Compose health, RabbitMQ queue snapshot and WMS mode-toggle outputs.
+**Change**: Expanded the Compose setup guide with concrete nopCommerce install values, simulator controls, RabbitMQ operator checks, load-test command, baseline threshold and the current plugin E2E prerequisite. Added the QA-1 pressure-test evidence template and QA-4 operability evidence, including local Compose health, RabbitMQ queue snapshot and WMS mode-toggle outputs.
 **Tradeoff/risk introduced**: QA-1 and final QA-4 remain partial evidence until the plugin publishes outbox rows to RabbitMQ, accepts worker fulfillment callbacks, and exposes pending fulfillment state.
 **Verification**: `docker compose ps` showed `nopcommerce`, `sqlserver`, `rabbitmq`, `worker`, `wms-sim` and `pos-sim` healthy; WMS `/health` and `/mode` returned `normal`; POS `/health` and `/mode` returned `normal`; `rabbitmqctl list_queues` showed `wms.order.placed` and `wms.order.placed.dlq` with `0` messages; WMS mode toggles succeeded for `slow`, `unavailable`, `contradictory` and back to `normal`.
 

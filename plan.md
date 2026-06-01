@@ -128,7 +128,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
-| Diogu | `[ ]` Docker Compose stitches every service/container; true E2E remains blocked on plugin RabbitMQ publish + fulfillment callback | `docker-compose.yml`, `docs/setup.md` |
+| Diogu | `[ ]` Docker Compose stitches every service/container; true E2E remains pending plugin RabbitMQ publish + fulfillment callback | `docker-compose.yml`, `docs/setup.md` |
 | Diogu | `[x]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
 | João Roldão + António | `[ ]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` |
 
@@ -160,7 +160,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
 | António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
-| Diogu | `[~]` Pressure-test harness documented; runtime P95/recovery measurement blocked until Phase 2 plugin publish + callback are complete | `docs/evidence/qa-1-pressure.md` |
+| Diogu | `[~]` Pressure-test harness documented; runtime P95/recovery measurement pending Phase 2 plugin publish + callback completion | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
 

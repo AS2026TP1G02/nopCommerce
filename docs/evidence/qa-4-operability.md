@@ -111,7 +111,7 @@ Relevant worker log fields:
 | Main queue depth visible | Verified via `rabbitmqctl` | `wms.order.placed` queue |
 | DLQ size visible | Verified via `rabbitmqctl` | `wms.order.placed.dlq` queue |
 | Retry/circuit-breaker behavior visible in worker logs | Implemented in worker; runtime capture pending | `/tmp/worker-qa4-operability.log` |
-| Fulfillment-pending count visible in plugin admin | Blocked by plugin admin/fulfillment work | Plugin admin view |
+| Fulfillment-pending count visible in plugin admin | Pending plugin admin/fulfillment work | Plugin admin view |
 | Combined refresh latency `<= 5 s` | Pending measurement | RabbitMQ UI + plugin admin |
 
 ## WMS Mode Toggle Capture

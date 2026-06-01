@@ -5,9 +5,9 @@ checkout continues. After WMS returns to normal, the backlog drains without
 manual intervention.
 
 > **Status:** measurement template prepared. Runtime numbers are not captured
-> yet because the Phase 2 order path is blocked by plugin work:
-> `OutboxPublisherTask.PublishAsync(...)` still needs to publish to RabbitMQ,
-> and the plugin needs a `fulfillment.status.changed.v1` callback endpoint.
+> yet because the Phase 2 order path still requires plugin work:
+> `OutboxPublisherTask.PublishAsync(...)` needs to publish to RabbitMQ, and the
+> plugin needs a `fulfillment.status.changed.v1` callback endpoint.
 
 ## Source Scenario
 

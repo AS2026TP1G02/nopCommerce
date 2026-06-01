@@ -4,8 +4,8 @@ Build-and-run instructions for the Scenario C omnichannel demo stack.
 
 > **Status: infrastructure walkthrough current as of 2026-06-01.** Docker
 > Compose starts the full service set. The true order-to-fulfillment E2E path is
-> still blocked until the plugin outbox publisher sends to RabbitMQ and the
-> worker fulfillment callback endpoint is implemented.
+> pending until the plugin outbox publisher sends to RabbitMQ and the worker
+> fulfillment callback endpoint is implemented.
 
 ## Prerequisites
 
@@ -187,7 +187,7 @@ The baseline was captured in `docs/evidence/baseline.md`:
 - **Traceability (Phase 5, QA-3)** — look up an `OrderGuid` in the plugin admin
   view; see `docs/evidence/qa-3-traceability.md`.
 
-## Current E2E blocker
+## Current E2E prerequisite
 
 Compose starts the services, but the order-to-WMS-to-fulfillment path cannot be
 claimed as complete until these plugin tasks land:
@@ -198,7 +198,7 @@ claimed as complete until these plugin tasks land:
   the worker and updates `OmniOrderFulfillment`.
 
 Until then, the Compose infrastructure is ready at the container/network/
-healthcheck level, while the Phase 2 E2E verification gate remains blocked by
+healthcheck level, while the Phase 2 E2E verification gate remains pending
 plugin integration.
 
 ## Baseline measurement

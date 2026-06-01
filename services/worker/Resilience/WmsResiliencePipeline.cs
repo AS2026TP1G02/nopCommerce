@@ -21,7 +21,8 @@ public static class WmsResiliencePipeline
         return new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
             {
-                ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<Exception>(ex => ex is not Polly.CircuitBreaker.BrokenCircuitException),
                 MaxRetryAttempts = options.MaxRetryAttempts,
                 BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,

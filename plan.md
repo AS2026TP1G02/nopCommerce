@@ -90,8 +90,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[ ]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
 | João Varela | `[x]` Admin view shells (empty MVC controller + view skeleton) | `.../OmnichannelCore/Controllers/`, `.../Views/` |
 | João Varela | `[x]` POS simulator scaffold (HTTP server, mode placeholder) | `services/pos-sim/` (new) |
-| António | `[ ]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
-| António | `[ ]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
+| António | `[x]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
+| António | `[x]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
 | Diogu | `[x]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
 | Diogu | `[x]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
 | Diogu | `[ ]` `docs/setup.md` skeleton with section headers + Phase markers | `docs/setup.md` |
@@ -125,8 +125,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[ ]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
 | João Roldão | `[ ]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
 | João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
-| António | `[ ]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
-| António | `[ ]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
+| António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
+| António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
 | Diogu | `[ ]` Docker Compose stitches everything end-to-end | `docker-compose.yml` |
 | Diogu | `[ ]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
@@ -157,9 +157,9 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | Diogu | `[x]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
 | António | `[ ]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/` |
-| António | `[ ]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
-| António | `[ ]` Dead-letter queue + handler for poison messages | `services/worker/` |
-| António | `[ ]` Backlog drain on circuit-breaker close | `services/worker/` |
+| António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
+| António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
+| António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
 | Diogu | `[ ]` Pressure-test harness: toggle WMS to `unavailable` for 30 s, capture P95 + recovery time + orders-pending count | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)

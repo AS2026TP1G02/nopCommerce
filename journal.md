@@ -38,6 +38,26 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-05-30 — Phase 2 async spine + Phase 5 admin trace (outbox track)
+
+**Phase**: 2 (outbox/async path) and 5 (traceability).
+**Driver**: ADR-0003 (outbox + RabbitMQ), ADR-0008 (3-ID correlation), ADR-0011 (consumer + reconciler), ADR-0007 (projection-first, status note updated); QA-5 (outbox ≤100 ms, no sync external HTTP in checkout), QA-3 (admin trace), QA-1 (resilience spine).
+**Files**:
+
+- Wire contract flattened: `services/contracts/Envelope.cs`, `services/contracts/Events.cs`; worker aligned `services/worker/OrderPlacedConsumer.cs`, `services/worker/WmsClient.cs`.
+- Plugin outbox: `.../OmnichannelCore/Services/OrderPlacedOutboxConsumer.cs` (IConsumer<OrderPlacedEvent> → outbox row with items), `.../Services/OutboxMessageFactory.cs` (shared payload builder, consumer + reconciler), `.../ScheduleTasks/OutboxPublisherTask.cs` (real RabbitMQ publish + publisher confirms), `.../ScheduleTasks/OutboxReconcilerTask.cs` (back-fill via factory).
+- Plugin fulfillment callback: `.../Controllers/OmnichannelCallbackController.cs` (`POST /omnichannel/callbacks/fulfillment/status-changed`), `.../Models/Callbacks/FulfillmentStatusChangedRequest.cs`, `.../Services/OmniFulfillmentService.cs` (upsert `OmniOrderFulfillment`, 3-ID logging).
+- Plugin admin trace (QA-3): `.../Controllers/OmnichannelCoreController.cs` (`Trace`), `.../Models/OrderTraceModel.cs`, `.../Views/Trace.cshtml`, read methods in `.../Services/OmnichannelCoreService.cs`.
+- Wiring/config: `.../OmnichannelCoreDefaults.cs` (event types, RabbitMqUri, exchange/routing-key, task metadata), `.../Infrastructure/PluginNopStartup.cs` (DI for new services), `.../OmnichannelCorePlugin.cs` (register/remove schedule tasks on install/uninstall), `.../Nop.Plugin.Misc.OmnichannelCore.csproj` (RabbitMQ.Client ref + CopyLocalLockFileAssemblies=true).
+- Worker loop closed: `services/worker/NopCallbackClient.cs`, `services/worker/Program.cs` (DI). *(worker-side POST is Pair-B/António's lane — added to complete the loop; flagged for his review.)*
+- Docs: `docs/architecture-report.md` (new, required artifact), `docs/adr/0007-...md` (Part-2 status note), `docs/adr/0005-...md` (demo-token note).
+
+**Change**: Implemented the durable async order→WMS→fulfillment path (outbox + publisher-confirm publish + reconciler), the inbound fulfillment callback that lands `OmniOrderFulfillment` in `Accepted`, and the admin OrderGuid trace view. Flattened the order-placed wire contract so plugin/worker/WMS-sim/JSON-samples agree.
+
+**Tradeoff/risk introduced**: (1) outbox publisher opens a RabbitMQ connection per task run — fine at demo cadence, not tuned for load. (2) fulfillment upsert is one row per OrderGuid (last-writer-wins on status) — no per-attempt history table. (3) worker typed HttpClients captured by the singleton hosted service (pre-existing pattern; demo-acceptable).
+
+**Verification**: NOT yet run — local SDK is 9.x, repo targets net10.0, so build/run must be done via the Docker images (`dotnet/sdk:10.0-alpine`). Pending: `docker compose up --build`; place order → outbox Pending→Published → RabbitMQ `wms.order.placed` → worker → WMS → fulfillment callback → `OmniOrderFulfillment` Accepted; admin Trace by OrderGuid returns the chain; install/uninstall round-trip. Recorded here as the explicit open verification step before Phase 2/5 gates can flip to Done.
+
 ## 2026-05-15 — Inbox + POS consistency track
 
 **Phase**: 4.

@@ -24,6 +24,7 @@ public sealed class OrderPlacedConsumer : BackgroundService
 {
     private readonly WorkerOptions _options;
     private readonly WmsClient _wmsClient;
+    private readonly NopCallbackClient _nopCallbackClient;
     private readonly ILogger<OrderPlacedConsumer> _logger;
 
     private IConnection? _connection;
@@ -31,10 +32,14 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public OrderPlacedConsumer(WorkerOptions options, WmsClient wmsClient, ILogger<OrderPlacedConsumer> logger)
+    public OrderPlacedConsumer(WorkerOptions options,
+        WmsClient wmsClient,
+        NopCallbackClient nopCallbackClient,
+        ILogger<OrderPlacedConsumer> logger)
     {
         _options = options;
         _wmsClient = wmsClient;
+        _nopCallbackClient = nopCallbackClient;
         _logger = logger;
     }
 
@@ -90,17 +95,12 @@ public sealed class OrderPlacedConsumer : BackgroundService
         try
         {
             var json = Encoding.UTF8.GetString(args.Body.Span);
-            var message = JsonSerializer.Deserialize<IntegrationMessage<CommerceOrderPlaced>>(json, JsonOptions)
+            var message = JsonSerializer.Deserialize<CommerceOrderPlacedMessage>(json, JsonOptions)
                           ?? throw new InvalidOperationException("Unparseable order.placed message");
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
-            // TODO Phase 2: POST fulfillment.status.changed.v1 to the plugin callback
-            //   (services/worker -> nopCommerce /omnichannel/callbacks/fulfillment/status-changed)
-            //   with X-Demo-Token auth and the standard envelope.
-            _logger.LogInformation(
-                "Fulfillment result order_guid={OrderGuid} status={Status} (callback post: TODO Phase 2)",
-                fulfillment.OrderGuid, fulfillment.Status);
+            await _nopCallbackClient.PostFulfillmentStatusAsync(fulfillment, CancellationToken.None);
 
             await channel.BasicAckAsync(args.DeliveryTag, multiple: false);
         }

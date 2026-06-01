@@ -11,12 +11,13 @@ Change it only through a cross-pair review (envelope, event types, topology).
 
 | File | Purpose |
 |------|---------|
-| `Envelope.cs` | `MessageEnvelope` (messageId, correlationId, eventType, occurredOnUtc, source) and `IntegrationMessage<T>`. |
-| `Events.cs` | `EventTypes` constants + payload records (`CommerceOrderPlaced`, `FulfillmentStatusChanged`, `PosStockChanged`). |
+| `Envelope.cs` | `MessageEnvelope` — the FLAT envelope (messageId, correlationId, eventType, occurredOnUtc, source) that every message record inherits. |
+| `Events.cs` | `EventTypes` constants + flat payload records (`CommerceOrderPlacedMessage`, `FulfillmentStatusChangedMessage`, `PosStockChangedMessage`). |
 | `Topology.cs` | RabbitMQ exchange / queue / routing-key / DLX names. |
 
-The records mirror the canonical samples in `docs/evidence/sample-*-v1.json`. Keep
-all three in sync.
+The records use a FLAT wire shape (envelope + domain fields at one JSON level, no
+nested payload) to match `docs/evidence/sample-*-v1.json`, the WMS simulator schema
+and the plugin callback models. Keep all of these in sync.
 
 ## Status
 

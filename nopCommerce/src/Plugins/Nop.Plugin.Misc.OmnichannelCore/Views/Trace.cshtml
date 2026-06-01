@@ -1,0 +1,125 @@
+@model OrderTraceModel
+@using Nop.Plugin.Misc.OmnichannelCore
+@{
+    Layout = "_ConfigurePlugin";
+    NopHtml.SetActiveMenuItemSystemName(OmnichannelCoreDefaults.SystemName);
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">Omnichannel Core — Order Trace</h1>
+</div>
+
+<div class="cards-group">
+    <div class="card card-default">
+        <div class="card-header">
+            Lookup by OrderGuid
+        </div>
+        <div class="card-body">
+            <form asp-controller="OmnichannelCore" asp-action="Trace" method="get">
+                <div class="form-group row">
+                    <div class="col-md-9">
+                        <input type="text" name="orderGuid" value="@Model.OrderGuid"
+                               class="form-control" placeholder="e.g. 8b5ce538-9b8b-4e81-9019-3e11f0a9d4ef" />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">Trace</button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.InvalidGuid)
+            {
+                <div class="alert alert-warning">"@Model.OrderGuid" is not a valid GUID.</div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Searched && !Model.InvalidGuid)
+    {
+        <div class="card card-default">
+            <div class="card-header">Outbox (commerce.order.placed.v1)</div>
+            <div class="card-body">
+                @if (Model.OutboxMessages.Any())
+                {
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Id</th><th>MessageId</th><th>Status</th>
+                                <th>Retries</th><th>Created (UTC)</th><th>Published (UTC)</th><th>Last error</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.OutboxMessages)
+                            {
+                                <tr>
+                                    <td>@row.Id</td>
+                                    <td>@row.MessageId</td>
+                                    <td>@row.Status</td>
+                                    <td>@row.RetryCount</td>
+                                    <td>@row.CreatedOnUtc.ToString("u")</td>
+                                    <td>@(row.PublishedOnUtc?.ToString("u") ?? "—")</td>
+                                    <td>@row.LastError</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>No outbox rows for this order.</p>
+                }
+            </div>
+        </div>
+
+        <div class="card card-default">
+            <div class="card-header">Fulfillment projection (OmniOrderFulfillment)</div>
+            <div class="card-body">
+                @if (Model.HasFulfillment)
+                {
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr><th>Status</th><td>@Model.FulfillmentStatus</td></tr>
+                            <tr><th>ExternalRequestId</th><td>@Model.ExternalRequestId</td></tr>
+                            <tr><th>TrackingNumber</th><td>@(Model.TrackingNumber ?? "—")</td></tr>
+                            <tr><th>Reason</th><td>@(Model.FulfillmentReason ?? "—")</td></tr>
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>No fulfillment row yet (worker has not reported a status for this order).</p>
+                }
+            </div>
+        </div>
+
+        <div class="card card-default">
+            <div class="card-header">Inbox (idempotency ledger)</div>
+            <div class="card-body">
+                @if (Model.InboxMessages.Any())
+                {
+                    <table class="table table-hover">
+                        <thead>
+                            <tr><th>Id</th><th>MessageId</th><th>EventType</th><th>Status</th><th>Received (UTC)</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.InboxMessages)
+                            {
+                                <tr>
+                                    <td>@row.Id</td>
+                                    <td>@row.MessageId</td>
+                                    <td>@row.EventType</td>
+                                    <td>@row.Status</td>
+                                    <td>@row.ReceivedOnUtc.ToString("u")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>No inbox rows linked to this order.</p>
+                }
+            </div>
+        </div>
+    }
+</div>

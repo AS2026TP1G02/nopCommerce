@@ -7,6 +7,7 @@ builder.Configuration.GetSection(WorkerOptions.SectionName).Bind(options);
 builder.Services.AddSingleton(options);
 
 builder.Services.AddHttpClient<WmsClient>();
+builder.Services.AddHttpClient<NopCallbackClient>();
 builder.Services.AddHostedService<OrderPlacedConsumer>();
 
 var host = builder.Build();

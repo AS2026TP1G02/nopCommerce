@@ -7,12 +7,12 @@ namespace Omnichannel.Worker;
 
 /// <summary>
 /// Calls the WMS simulator's POST /fulfillments and maps the response to a
-/// <see cref="FulfillmentStatusChanged"/> payload. The WMS call is wrapped in
-/// the retry + circuit-breaker pipeline so the worker degrades gracefully when
-/// the WMS is slow/unavailable (QA-1).
+/// <see cref="FulfillmentStatusChangedMessage"/>. The WMS call is wrapped in the
+/// retry + circuit-breaker pipeline so the worker degrades gracefully when the
+/// WMS is slow/unavailable (QA-1).
 ///
-/// SCAFFOLD: the happy path is implemented; degraded mapping (breaker-open →
-/// status "pending"/"degraded") is stubbed and must be finished in Phase 3.
+/// SCAFFOLD: the happy path is implemented against the FLAT contract; degraded
+/// mapping (breaker-open → status "Degraded") is left for Phase 3.
 /// </summary>
 public sealed class WmsClient
 {
@@ -30,29 +30,27 @@ public sealed class WmsClient
         _pipeline = WmsResiliencePipeline.Build(_options, logger);
     }
 
-    public async Task<FulfillmentStatusChanged> RequestFulfillmentAsync(
-        IntegrationMessage<CommerceOrderPlaced> message,
+    public async Task<FulfillmentStatusChangedMessage> RequestFulfillmentAsync(
+        CommerceOrderPlacedMessage message,
         CancellationToken cancellationToken)
     {
-        var order = message.Payload;
-
-        // The WMS expects the order-placed contract (see wms-sim/app/schemas.py).
+        // The WMS expects the FLAT order-placed contract (see wms-sim/app/schemas.py).
         var wmsRequest = new
         {
             messageId = message.MessageId,
             correlationId = message.CorrelationId,
             eventType = message.EventType,
             occurredOnUtc = message.OccurredOnUtc,
-            orderGuid = order.OrderGuid,
-            orderId = order.OrderId,
-            storeId = order.StoreId,
-            items = order.Lines.Select(l => new
+            orderGuid = message.OrderGuid,
+            orderId = message.OrderId,
+            storeId = message.StoreId,
+            items = message.Items.Select(i => new
             {
-                orderItemId = 0,
-                productId = l.ProductId,
-                sku = l.Sku,
-                quantity = l.Quantity,
-                warehouseId = 1
+                orderItemId = i.OrderItemId,
+                productId = i.ProductId,
+                sku = i.Sku,
+                quantity = i.Quantity,
+                warehouseId = i.WarehouseId
             })
         };
 
@@ -66,11 +64,16 @@ public sealed class WmsClient
 
         _logger.LogInformation(
             "WMS accepted order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId}",
-            order.OrderGuid, message.MessageId, response.ExternalRequestId);
+            message.OrderGuid, message.MessageId, response.ExternalRequestId);
 
-        return new FulfillmentStatusChanged
+        return new FulfillmentStatusChangedMessage
         {
-            OrderGuid = order.OrderGuid,
+            MessageId = Guid.NewGuid(),
+            CorrelationId = message.CorrelationId,
+            EventType = EventTypes.FulfillmentStatusChanged,
+            OccurredOnUtc = DateTime.UtcNow,
+            Source = "worker",
+            OrderGuid = message.OrderGuid,
             ExternalRequestId = response.ExternalRequestId,
             Status = response.Status,
             Reason = null

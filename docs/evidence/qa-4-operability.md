@@ -116,8 +116,8 @@ Relevant worker log fields:
 
 ## WMS Mode Toggle Capture
 
-Captured by Diogu on the local Compose stack. This proves the WMS simulator can
-switch through every demo pressure mode without restarting containers:
+Captured on the local Compose stack. This proves the WMS simulator can switch
+through every demo pressure mode without restarting containers:
 
 ```bash
 curl -X POST http://localhost:8081/mode/slow
@@ -176,9 +176,9 @@ wms.order.placed.dlq    0         0               0
 
 ## Current Conclusion
 
-Compose satisfies Diogu's infrastructure part of QA-4: RabbitMQ Management UI is
-published, all services reached healthy state, WMS/POS controls respond, WMS
-mode toggles work for every pressure mode, and queue/DLQ state can be inspected.
-The final QA-4 pass/fail measurement must wait for the plugin to publish real
-order messages, accept fulfillment callbacks, and expose pending fulfillment
-state in the admin view.
+Compose satisfies the infrastructure part of QA-4: RabbitMQ Management UI is
+published, all services reached healthy state, WMS/POS controls respond, WMS mode
+toggles work for every pressure mode, and queue/DLQ state can be inspected. The
+final QA-4 pass/fail measurement must wait for the plugin to publish real order
+messages, accept fulfillment callbacks, and expose pending fulfillment state in
+the admin view.

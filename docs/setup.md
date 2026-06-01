@@ -197,9 +197,9 @@ claimed as complete until these plugin tasks land:
 - `OmnichannelCallbackController` accepts `fulfillment.status.changed.v1` from
   the worker and updates `OmniOrderFulfillment`.
 
-Until then, Diogu's Compose work is ready at the container/network/healthcheck
-level, while the Phase 2 E2E verification gate remains blocked by plugin
-integration.
+Until then, the Compose infrastructure is ready at the container/network/
+healthcheck level, while the Phase 2 E2E verification gate remains blocked by
+plugin integration.
 
 ## Baseline measurement
 

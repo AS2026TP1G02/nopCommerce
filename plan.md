@@ -243,7 +243,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
-| Diogu | `[~]` Evidence pack: baseline complete; QA-1 runtime evidence captured as a partial pass; QA-4 and final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
+| Diogu | `[~]` Evidence pack: baseline and QA-4 complete; QA-1 runtime evidence captured as a partial pass; final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
@@ -306,7 +306,7 @@ Tick every line before declaring the plan complete.
   Current 2026-06-02 result: partial pass. P95 and pending-order recovery passed; broker drain time did not meet `<= 60 s`.
 - [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
 - [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
-- [ ] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.
+- [x] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.
 - [ ] **QA-5**: outbox row written ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP calls in checkout trace.
 - [ ] All five demo scenarios runnable from `docker compose up` (normal, WMS unavailable + recovery, POS legitimate, POS duplicate, POS stale).
 - [ ] `docs/evidence/` populated with numbered measurements for every QA scenario.

@@ -38,6 +38,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-02 — Align plugin↔worker envelope contract + close out roldão's Phase-2/5/6 deliverables
+
+**Phase**: 2 + 5 + 6 (integration boundary + traceability + ADRs).
+**Driver**: ADR-0009 (plugin-worker boundary / envelope), ADR-0008 (3-ID correlation), ADR-0007 (projection-first); QA-3 (traceability), QA-5 (async spine).
+**Files**: merged `origin/develop` (took the worker + `services/contracts` from develop = António's lane; dropped my stopgap `NopCallbackClient.cs`); plugin `Services/OutboxMessageFactory.cs` + `Models/Callbacks/FulfillmentStatusChangedRequest.cs` (+`FulfillmentStatusChangedPayload`) + `Controllers/OmnichannelCallbackController.cs` + `Services/OmniFulfillmentService.cs` (nested envelope, both directions); `ScheduleTasks/OutboxPublisherTask.cs` (publish-success + error logs now carry the 3 IDs); `Views/Trace.cshtml` (worker-attempts pointer); `docs/adr/0009-...md` (frozen envelope), `docs/adr/0007-...md` (Part-2 outcome), `docs/evidence/sample-commerce-order-placed-v1.json` (nested); plugin tests; `plan.md` (roldão checkboxes).
+**Change**: Conformed the plugin to the shared nested `IntegrationMessage<TPayload>` envelope that the worker consumes — both `commerce.order.placed.v1` (plugin→worker) and `fulfillment.status.changed.v1` (worker→plugin). **Corrects the 2026-05-30 entry's claim that the "flattened" wire contract made plugin/worker/samples agree**: they had in fact diverged (plugin flat vs worker nested), which dead-lettered orders; the frozen contract is now the nested envelope, documented in ADR-0009. Also closed roldão's remaining plan items: outbox publish now logs success + failure with `order_guid`/`message_id`; admin Trace view points to worker attempts (RabbitMQ UI / worker logs by MessageId); ADR-0007 records the projection-only Part-2 outcome.
+**Tradeoff/risk introduced**: Payload change is a Pair A↔B boundary change (versioned event) — conforms to António's contract; flagged for his review. The plugin still logs via interpolated strings (nopCommerce `ILogger` has no structured-template API), but field names match the worker so QA-3 grep works.
+**Verification**: plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` → 0 errors; `dotnet test --filter ~OmnichannelCore` → 12/12 pass. Live `docker compose up --build`: published a nested `commerce.order.placed.v1` → worker deserialized it → WMS accepted (`WMS-REQ-8888`) → fulfillment callback **HTTP 200** → `OmniOrderFulfillment` Accepted + inbox Processed, **DLQ = 0**, both directions confirmed (OrderGuid `b8d5dd64-…`). Local only — not pushed.
+
 ## 2026-06-01 — Fix compose so scheduled tasks auto-fire + install persists
 
 **Phase**: fixup (infra; resolves the scheduler-port risk flagged in the entry below).

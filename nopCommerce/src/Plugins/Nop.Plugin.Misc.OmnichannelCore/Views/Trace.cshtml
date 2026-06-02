@@ -121,5 +121,20 @@
                 }
             </div>
         </div>
+
+        <div class="card card-default">
+            <div class="card-header">Worker delivery attempts (RabbitMQ / worker)</div>
+            <div class="card-body">
+                <p>
+                    The worker's delivery/retry attempts and DLQ state are not stored in the plugin DB.
+                    Resolve them by the <strong>MessageId</strong> shown above (QA-3: OrderGuid → MessageId
+                    → worker log/queue, in &le; 3 clicks):
+                </p>
+                <ul>
+                    <li><a href="http://localhost:15672" target="_blank" rel="noopener">RabbitMQ Management UI</a> — queue <code>wms.order.placed</code>, DLQ <code>wms.order.placed.dlq</code> (queue depth, redelivery, DLQ size).</li>
+                    <li>Worker logs — filter on <code>message_id</code> / <code>order_guid</code> / <code>external_request_id</code> (same field names as this plugin).</li>
+                </ul>
+            </div>
+        </div>
     }
 </div>

@@ -102,6 +102,10 @@ public class OutboxPublisherTask : IScheduleTask
                 message.PublishedOnUtc = DateTime.UtcNow;
                 message.UpdatedOnUtc = message.PublishedOnUtc;
                 await _outboxMessageRepository.UpdateAsync(message);
+
+                // ADR-0008 / QA-3: trace the publish point with the 3 correlation IDs.
+                await _logger.InformationAsync(
+                    $"OmnichannelCore outbox published order_guid={message.OrderGuid} message_id={message.MessageId} event_type={message.EventType}");
             }
             catch (Exception exception)
             {
@@ -111,7 +115,7 @@ public class OutboxPublisherTask : IScheduleTask
                 await _outboxMessageRepository.UpdateAsync(message);
 
                 await _logger.ErrorAsync(
-                    $"OmnichannelCore outbox publish failed for message_id={message.MessageId}", exception);
+                    $"OmnichannelCore outbox publish failed order_guid={message.OrderGuid} message_id={message.MessageId}", exception);
             }
         }
     }

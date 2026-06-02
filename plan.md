@@ -5,7 +5,7 @@ Per-dev, per-date plan for delivering Part 2 of *Architectural Evolution of nopC
 If `plan.md` and `roadmap.md` ever conflict, `roadmap.md` is authoritative for *what* must be delivered; this file is authoritative for *who* delivers it *when*.
 
 > **Status — 2026-06-02 (final build day; demo 2026-06-03).** Both integration PRs are merged to `develop`: **#10** (outbox + real RabbitMQ publish + fulfillment callback + `Trace.cshtml`) and **#11** (Compose + `setup.md` + evidence scaffolding). **Phases 1–5 are code-complete on `develop`.** What remains today is *runtime evidence + polish*, not new features:
-> - **QA-1** (pressure), **QA-4** (operability), **QA-5** (outbox latency) — numbers not yet captured (templates).
+> - **QA-5** (outbox latency) — numbers not yet captured (template).
 > - **QA-2** runtime numbers to finalize; **QA-3** to extend from the POS receive side to the full 10-order order→fulfillment link.
 > - **Phase-1 uninstall DB gate** still unproven.
 > - **Slides** (`docs/part2/`), full **5-scenario dry-run ×2**, and a fresh-clone `docker compose up` smoke.
@@ -166,7 +166,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
 | António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
-| Diogu | `[~]` Pressure-test harness documented; **QA-1 measured on merged stack: checkout P95 and "0 pending > 5 min" passed, but broker drain exceeded the `<= 60 s` target** | `docs/evidence/qa-1-pressure.md` |
+| Diogu | `[x]` Pressure-test harness documented; **QA-1 re-measured on merged stack and now passes: checkout P95, broker drain, and "0 pending > 5 min" all meet target** | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
 
@@ -243,7 +243,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
-| Diogu | `[~]` Evidence pack: baseline and QA-4 complete; QA-1 runtime evidence captured as a partial pass; final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
+| Diogu | `[~]` Evidence pack: baseline, QA-1, and QA-4 complete; final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
@@ -302,8 +302,8 @@ Tick every line before declaring the plan complete.
 
 - [ ] `docker compose up` from a fresh clone reaches healthy state without manual steps.
 - [ ] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
-- [ ] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
-  Current 2026-06-02 result: partial pass. P95 and pending-order recovery passed; broker drain time did not meet `<= 60 s`.
+- [x] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
+  Current 2026-06-02 result: pass. P95, broker drain, and pending-order recovery all met target.
 - [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
 - [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
 - [x] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.

@@ -85,7 +85,7 @@ public sealed class OrderPlacedConsumer : BackgroundService
     {
         var channel = _channel!;
         IntegrationMessage<CommerceOrderPlaced>? message = null;
-        
+
         try
         {
             var json = Encoding.UTF8.GetString(args.Body.Span);
@@ -94,15 +94,15 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
-            // If circuit breaker is open (status=pending), requeue the message instead of ACKing
-            if (fulfillment.Status == "pending")
+        // If circuit breaker is open (status=pending), wait before requeuing to avoid spam             if (fulfillment.Status == "pending")
             {
                 _logger.LogInformation(
-                    "Circuit breaker open, requeuing message order_guid={OrderGuid} message_id={MessageId}",
-                    message.Payload.OrderGuid, message.MessageId);
+                "Circuit breaker open, requeuing message after delay order_guid={OrderGuid} message_id={MessageId}", message.Payload.OrderGuid, message.MessageId);
                 await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true);
                 return;
             }
+            // Wait a bit before requeuing to avoid tight loop                                                                                                                                 
+            await Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
 
             await PostFulfillmentCallbackAsync(message, fulfillment, CancellationToken.None);
 

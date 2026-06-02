@@ -71,6 +71,7 @@ public sealed class WmsClient
 
             return new FulfillmentStatusChanged
             {
+                OrderId = order.OrderId,
                 OrderGuid = order.OrderGuid,
                 ExternalRequestId = response.ExternalRequestId,
                 Status = response.Status,
@@ -85,6 +86,7 @@ public sealed class WmsClient
 
             return new FulfillmentStatusChanged
             {
+                OrderId = order.OrderId,
                 OrderGuid = order.OrderGuid,
                 ExternalRequestId = string.Empty,
                 Status = "pending",

@@ -52,6 +52,9 @@ services:
     environment:
       # Match the store-URL port (8080) the task scheduler self-calls; on :80 it was refused.
       ASPNETCORE_URLS: http://+:8080
+      # Make plugin/runtime wiring explicit instead of relying on code defaults.
+      OmnichannelCore__RabbitMqUri: amqp://guest:guest@rabbitmq:5672/
+      OmnichannelCore__DemoToken: omni-demo-token
     ports:
       - "8080:8080"
     volumes:
@@ -59,6 +62,8 @@ services:
       - nopcommerce_appdata:/app/App_Data
     depends_on:
       sqlserver:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test:

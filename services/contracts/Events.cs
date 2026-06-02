@@ -42,6 +42,7 @@ public record OrderLine
 /// </summary>
 public record FulfillmentStatusChanged
 {
+    public int OrderId { get; init; }
     public Guid OrderGuid { get; init; }
     public string ExternalRequestId { get; init; } = string.Empty;
 

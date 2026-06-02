@@ -2,31 +2,35 @@
 
 Build-and-run instructions for the Scenario C omnichannel demo stack.
 
-> **Status: infrastructure walkthrough current as of 2026-06-01.** Docker
-> Compose starts the full service set. The true order-to-fulfillment E2E path is
-> pending until the plugin outbox publisher sends to RabbitMQ and the worker
-> fulfillment callback endpoint is implemented.
+## Phase Markers
+
+- Phase 1: stack bootstrap, prerequisites, install flow, and smoke checks.
+- Phase 2: normal order-to-fulfillment happy path.
+- Phase 3: WMS pressure and recovery controls.
+- Phase 4: POS consistency controls.
+- Phase 5: traceability and operability checks.
+- Phase 6: evidence capture and fresh-clone smoke.
 
 ## Prerequisites
 
 - Docker + Docker Compose v2
-- (local dev only) .NET SDK `10.0.100` — see `nopCommerce/global.json`
-- (local dev only) Python 3.12 for `services/wms-sim`
-- (measurement only) `k6` for `load-test/run-load-test.sh`
+- Local ports `8080`, `8081`, `8082`, `1433`, `5672`, and `15672` free
+- Local dev only: `.NET SDK 10.0.100` from [nopCommerce/global.json](/home/diogu/UNI/nopCommerce/nopCommerce/global.json)
+- Measurement only: `k6` for `load-test/run-load-test.sh`
 
-## Components
+## Stack
 
-| Service | Path | Port (host) | Role |
-|---------|------|-------------|------|
-| nopCommerce | `nopCommerce/` | 8080 | commerce core (storefront + admin + OmnichannelCore plugin) |
-| SQL Server | (image) | 1433 | nopCommerce database |
-| RabbitMQ | (image) | 5672 / 15672 | async order→WMS transport + management UI |
-| Worker | `services/worker/` | — | consumes `commerce.order.placed.v1`, calls WMS, posts fulfillment status |
-| WMS sim | `services/wms-sim/` | 8081 | warehouse boundary; modes normal/slow/unavailable/contradictory |
-| POS sim | `services/pos-sim/` | 8082 | POS stock events; modes normal/duplicate/stale |
-| Contracts | `services/contracts/` | — | shared message envelope (referenced by worker) |
+| Service | Path | Host port | Role |
+|---------|------|-----------|------|
+| nopCommerce | `nopCommerce/` | `8080` | storefront, admin, and `Misc.OmnichannelCore` plugin |
+| SQL Server | image | `1433` | nopCommerce database |
+| RabbitMQ | image | `5672`, `15672` | broker and management UI |
+| Worker | `services/worker/` | — | consumes `commerce.order.placed.v1`, calls WMS, posts fulfillment callback |
+| WMS sim | `services/wms-sim/` | `8081` | normal / slow / unavailable / contradictory warehouse modes |
+| POS sim | `services/pos-sim/` | `8082` | normal / duplicate / stale stock events |
+| Contracts | `services/contracts/` | — | shared envelope and topology names |
 
-## Quick start
+## Quick Start
 
 From the repository root:
 
@@ -34,25 +38,23 @@ From the repository root:
 docker compose up --build
 ```
 
-Keep this terminal open for logs. In another terminal, confirm the containers:
+In a second terminal:
 
 ```bash
 docker compose ps
 ```
 
-Expected host endpoints:
+Expected endpoints:
 
 - Storefront: <http://localhost:8080>
-- RabbitMQ management: <http://localhost:15672> (`guest` / `guest`)
+- RabbitMQ UI: <http://localhost:15672> with `guest` / `guest`
 - WMS simulator: <http://localhost:8081>
 - POS simulator: <http://localhost:8082>
 
-## nopCommerce install
+## First-Time Install
 
-If the database volume is fresh, open <http://localhost:8080> and complete the
-nopCommerce install wizard.
-
-Use these Docker-internal database values:
+If the SQL/App_Data volumes are fresh, open <http://localhost:8080> and finish
+the nopCommerce install wizard with these values:
 
 | Field | Value |
 |-------|-------|
@@ -63,72 +65,100 @@ Use these Docker-internal database values:
 | SQL password | `Omni_Demo_Pass1` |
 | Create database if it does not exist | enabled |
 
-After installation, sign in to admin and install **Misc.OmnichannelCore** from
-Admin -> Configuration -> Plugins.
+After install:
 
-## Infrastructure smoke checks
+1. Sign in to admin.
+2. Go to `Configuration -> Local plugins`.
+3. Install `Misc.OmnichannelCore`.
+4. Confirm the plugin admin page is reachable, or open `/Admin/OmnichannelCore/Configure` directly.
 
-Run these from the repository root after `docker compose up --build`:
+## Compose Wiring
+
+`docker-compose.yml` now declares the omnichannel runtime settings explicitly:
+
+- `OmnichannelCore__RabbitMqUri=amqp://guest:guest@rabbitmq:5672/`
+- `OmnichannelCore__DemoToken=omni-demo-token`
+- `Worker__RabbitMqUri=amqp://guest:guest@rabbitmq:5672/`
+- `Worker__WmsBaseUrl=http://wms-sim:8080`
+- `Worker__NopCommerceBaseUrl=http://nopcommerce:8080`
+- `Worker__DemoToken=omni-demo-token`
+- `NopCommerce__BaseUrl=http://nopcommerce:8080` for the POS simulator
+
+That is the intended Phase 2/3/4/5 boundary wiring:
+
+- plugin outbox publisher -> RabbitMQ exchange `commerce`
+- worker consumer <- queue `wms.order.placed`
+- worker -> WMS simulator HTTP
+- worker -> plugin fulfillment callback HTTP
+- POS simulator -> plugin stock callback HTTP
+
+## Smoke Checks
+
+Run these after `docker compose up --build`:
 
 ```bash
 curl http://localhost:8081/health
 curl http://localhost:8081/mode
 curl http://localhost:8082/health
 curl http://localhost:8082/mode
-```
-
-Check RabbitMQ queue state:
-
-```bash
 docker compose exec rabbitmq rabbitmqctl list_queues name messages messages_ready messages_unacknowledged
 ```
 
-Latest local smoke capture: `2026-06-01T23:11:15+01:00` on commit
-`207a628fd1`. `docker compose ps` showed `nopcommerce`, `sqlserver`,
-`rabbitmq`, `worker`, `wms-sim`, and `pos-sim` all healthy. WMS and POS both
-reported `normal` mode, and RabbitMQ showed `wms.order.placed` plus
-`wms.order.placed.dlq` with zero messages.
-
-Open <http://localhost:15672>, then inspect:
+Open RabbitMQ UI and verify:
 
 - Queues -> `wms.order.placed`
 - Queues -> `wms.order.placed.dlq`
 - Exchanges -> `commerce`
 - Exchanges -> `commerce.dlx`
 
-## WMS simulator controls
+## Normal End-to-End Flow
 
-The WMS simulator is exposed on host port `8081`.
+Phase 2 is considered wired when this path succeeds:
+
+1. Place an order in the storefront.
+2. Plugin writes an `OmniOutboxMessage` row.
+3. `OutboxPublisherTask` publishes it to RabbitMQ.
+4. Worker consumes `commerce.order.placed.v1`.
+5. Worker calls WMS simulator `POST /fulfillments`.
+6. Worker posts `fulfillment.status.changed.v1` to `/omnichannel/callbacks/fulfillment/status-changed`.
+7. Plugin writes or updates `OmniOrderFulfillment` with status `Accepted`.
+
+Useful checks during that flow:
+
+```bash
+docker compose logs worker --since 10m
+docker compose exec rabbitmq rabbitmqctl list_queues name messages messages_ready messages_unacknowledged
+```
+
+If the order remains stuck, first check that the plugin is installed and the
+nopCommerce scheduled tasks are enabled.
+
+## WMS Simulator
 
 ```bash
 curl http://localhost:8081/health
 curl http://localhost:8081/mode
-
 curl -X POST http://localhost:8081/mode/normal
 curl -X POST http://localhost:8081/mode/slow
 curl -X POST http://localhost:8081/mode/unavailable
 curl -X POST http://localhost:8081/mode/contradictory
 ```
 
-Mode behavior:
-
 | Mode | Behavior |
 |------|----------|
-| `normal` | `POST /fulfillments` returns HTTP `202` with `Accepted`. |
-| `slow` | waits `WMS_SLOW_DELAY_SECONDS`, then returns accepted. |
-| `unavailable` | returns HTTP `503`; used for QA-1 pressure. |
-| `contradictory` | returns HTTP `409`; used for rejected/poison-path demos. |
+| `normal` | returns HTTP `202` accepted |
+| `slow` | waits `WMS_SLOW_DELAY_SECONDS`, then returns accepted |
+| `unavailable` | returns HTTP `503` |
+| `contradictory` | returns HTTP `409` |
 
-## POS simulator controls
-
-The POS simulator is exposed on host port `8082`.
+## POS Simulator
 
 ```bash
 curl http://localhost:8082/health
 curl http://localhost:8082/mode
 ```
 
-Emit one normal stock update:
+Normal event:
 
 ```bash
 curl -X POST http://localhost:8082/emit \
@@ -136,7 +166,7 @@ curl -X POST http://localhost:8082/emit \
   -d '{"mode":"normal","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":3}'
 ```
 
-Emit a duplicate update:
+Duplicate event:
 
 ```bash
 curl -X POST http://localhost:8082/emit \
@@ -144,7 +174,7 @@ curl -X POST http://localhost:8082/emit \
   -d '{"mode":"duplicate","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":4}'
 ```
 
-Emit a stale update:
+Stale event:
 
 ```bash
 curl -X POST http://localhost:8082/emit \
@@ -152,56 +182,47 @@ curl -X POST http://localhost:8082/emit \
   -d '{"mode":"stale","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":5}'
 ```
 
-The simulator sends `X-Demo-Token: omni-demo-token` to
-`/omnichannel/callbacks/pos/stock-changed`.
+The simulator sends `X-Demo-Token: omni-demo-token` to the plugin callback.
 
-## Load-test command
+## Measurement
 
-The checkout automation used for the baseline lives under `load-test/`.
+Baseline checkout command:
 
 ```bash
 cd load-test
 ORDER_TARGET=50 BASE_URL=http://localhost:8080 ./run-load-test.sh automated
 ```
 
-The baseline was captured in `docs/evidence/baseline.md`:
+Baseline values from [docs/evidence/baseline.md](/home/diogu/UNI/nopCommerce/docs/evidence/baseline.md):
 
 | Metric | Value |
 |--------|-------|
-| Baseline P50 checkout latency | `1235 ms` |
-| Baseline P95 checkout latency | `1390.05 ms` |
+| P50 checkout latency | `1235 ms` |
+| P95 checkout latency | `1390.05 ms` |
 | QA-1 P95 threshold | `2085 ms` |
 
-## Demo scenarios
+## Demo Scenarios
 
-- **Normal order flow (Phase 2)** — place an order → `OmniOutboxMessage` row →
-  worker → WMS → `OmniOrderFulfillment` state `Accepted`.
-- **WMS pressure + recovery (Phase 3, QA-1)** —
-  `curl -X POST http://localhost:8081/mode/unavailable`, place orders, observe
-  worker retry → circuit breaker → backlog drain after
-  `curl -X POST http://localhost:8081/mode/normal`. Other WMS modes:
-  `curl -X POST http://localhost:8081/mode/slow` and
-  `curl -X POST http://localhost:8081/mode/contradictory`.
-- **POS consistency (Phase 4, QA-2)** — `services/pos-sim` `normal` / `duplicate`
-  / `stale`; see `docs/evidence/qa-2-consistency.md`.
-- **Traceability (Phase 5, QA-3)** — look up an `OrderGuid` in the plugin admin
-  view; see `docs/evidence/qa-3-traceability.md`.
+- Normal order flow: storefront order -> outbox -> RabbitMQ -> worker -> WMS -> fulfillment callback.
+- QA-1 pressure: set WMS to `unavailable`, place orders, restore `normal`, then measure backlog drain.
+- QA-2 consistency: use POS `normal`, `duplicate`, and `stale`.
+- QA-3 traceability: look up an `OrderGuid` in the plugin admin trace page.
+- QA-4 operability: use RabbitMQ UI plus plugin admin counters.
 
-## Current E2E prerequisite
+## Fresh-Clone Smoke
 
-Compose starts the services, but the order-to-WMS-to-fulfillment path cannot be
-claimed as complete until these plugin tasks land:
+Before presentation/demo, verify from a fresh checkout:
 
-- `OutboxPublisherTask.PublishAsync(...)` publishes pending outbox payloads to
-  RabbitMQ exchange `commerce` with routing key `commerce.order.placed.v1`.
-- `OmnichannelCallbackController` accepts `fulfillment.status.changed.v1` from
-  the worker and updates `OmniOrderFulfillment`.
+```bash
+docker compose up --build
+docker compose ps
+docker compose exec rabbitmq rabbitmqctl list_queues name messages messages_ready messages_unacknowledged
+```
 
-Until then, the Compose infrastructure is ready at the container/network/
-healthcheck level, while the Phase 2 E2E verification gate remains pending
-plugin integration.
+Success condition:
 
-## Baseline measurement
-
-See `docs/evidence/baseline.md` (captured before plugin install; referenced by
-the QA-1 "≤ 1.5× baseline" gate).
+- all six services healthy
+- RabbitMQ UI reachable
+- WMS and POS health endpoints reachable
+- plugin install works on a fresh DB
+- one normal order reaches `Accepted`

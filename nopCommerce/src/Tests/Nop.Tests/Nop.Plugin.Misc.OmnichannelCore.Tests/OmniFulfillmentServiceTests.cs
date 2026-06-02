@@ -21,10 +21,12 @@ public class OmniFulfillmentServiceTests
         var result = await service.ApplyFulfillmentStatusChangedAsync(CreateRequest(orderGuid, "accepted"));
 
         result.Status.Should().Be(OmniFulfillmentStatus.Accepted);
+        result.OrderId.Should().Be(42);
         result.AcceptedOnUtc.Should().NotBeNull();
         result.CompletedOnUtc.Should().BeNull();
         repository.Entities.Should().ContainSingle();
         repository.Entities[0].OrderGuid.Should().Be(orderGuid);
+        repository.Entities[0].OrderId.Should().Be(42);
     }
 
     [Test]
@@ -41,6 +43,7 @@ public class OmniFulfillmentServiceTests
 
         repository.Entities.Should().ContainSingle();
         completed.Status.Should().Be(OmniFulfillmentStatus.Completed);
+        completed.OrderId.Should().Be(42);
         completed.CompletedOnUtc.Should().NotBeNull();
         // The original AcceptedOnUtc is preserved, not overwritten.
         completed.AcceptedOnUtc.Should().Be(acceptedOnUtc);
@@ -65,6 +68,7 @@ public class OmniFulfillmentServiceTests
             Source = "worker",
             Payload = new FulfillmentStatusChangedPayload
             {
+                OrderId = 42,
                 OrderGuid = orderGuid,
                 ExternalRequestId = "wms-req-1",
                 Status = status,

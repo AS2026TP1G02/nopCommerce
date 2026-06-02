@@ -166,7 +166,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
 | António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
-| Diogu | `[~]` Pressure-test harness documented; **plugin publish + callback now merged — QA-1 runtime P95/drain/pending numbers still to be captured on the merged stack** | `docs/evidence/qa-1-pressure.md` |
+| Diogu | `[~]` Pressure-test harness documented; **QA-1 measured on merged stack: checkout P95 and "0 pending > 5 min" passed, but broker drain exceeded the `<= 60 s` target** | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
 
@@ -243,11 +243,12 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
-| Diogu | `[~]` Evidence pack: baseline + QA-4 infrastructure captured; QA-1 runtime numbers pending plugin E2E unblock | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
+| Diogu | `[~]` Evidence pack: baseline complete; QA-1 runtime evidence captured as a partial pass; QA-4 and final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
-| Diogu | `[ ]` Demo + measurement slides; final Compose smoke from a fresh clone | (slides repo), `docker-compose.yml` |
+| Diogu | `[ ]` Demo + measurement slides | (slides repo) |
+| João Varela | `[ ]` Final Compose smoke from a fresh clone | `docker-compose.yml` |
 | All 4 | `[ ]` Full end-to-end dry run of all 5 demo scenarios (normal, WMS unavailable + recovery, POS legitimate update, POS duplicate, POS stale) | (demo scripts) |
 
 **Verification gate** (Sun 31 May)
@@ -260,7 +261,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 **Risks**
 
-- Docker Compose drift between dev machines → mitigation: Diogu does the fresh-clone smoke on a different machine if possible on day 18.
+- Docker Compose drift between dev machines → mitigation: João Varela does the fresh-clone smoke on a different machine if possible on day 18.
 - Running out of time on evidence collection vs implementation polish → mitigation: João Varela + Diogu start evidence consolidation on the morning of day 17, not day 18.
 
 ## Parallelism map
@@ -292,7 +293,7 @@ Phase 3 and Phase 4 share **zero files**: Phase 3 touches `services/worker/` + `
 | Scheduled-task publish lag exceeds 60 s under load | 2 | Pair A (João Roldão) | Measure on day 1 of Phase 2; if > 60 s, reduce task interval or batch size before Phase 3. |
 | Circuit-breaker thresholds tuned for unit tests, not the live demo | 3 | Pair B (António) | Diogu runs the QA-1 scenario in demo-like conditions on day 14, not just day 12. |
 | Structured-logging discipline drifts on error paths | 5 | Pair A + Pair B | 30-min cross-pair log review on day 16 catches missing IDs before evidence collection. |
-| Docker Compose works on one machine, fails on another | 6 | Diogu | Fresh-clone smoke from a second machine on day 18. |
+| Docker Compose works on one machine, fails on another | 6 | João Varela | Fresh-clone smoke from a second machine on day 18. |
 | One dev goes silent for several days (classes / illness) | any | Pair partner | Pair PR review means the partner has full context; daily stand-up surfaces blockers within 24 h. |
 
 ## Pre-freeze verification checklist (2026-05-31)
@@ -302,6 +303,7 @@ Tick every line before declaring the plan complete.
 - [ ] `docker compose up` from a fresh clone reaches healthy state without manual steps.
 - [ ] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
 - [ ] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
+  Current 2026-06-02 result: partial pass. P95 and pending-order recovery passed; broker drain time did not meet `<= 60 s`.
 - [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
 - [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
 - [ ] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.

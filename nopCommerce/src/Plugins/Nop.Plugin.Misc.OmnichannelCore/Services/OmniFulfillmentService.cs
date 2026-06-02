@@ -54,6 +54,7 @@ public class OmniFulfillmentService
             fulfillment = new OmniOrderFulfillment
             {
                 OrderGuid = orderGuid,
+                OrderId = payload.OrderId,
                 MessageId = request.MessageId,
                 CorrelationId = request.CorrelationId,
                 ExternalRequestId = payload.ExternalRequestId,
@@ -75,6 +76,8 @@ public class OmniFulfillmentService
             return fulfillment;
         }
 
+if (payload.OrderId > 0)
+    fulfillment.OrderId = payload.OrderId;
         fulfillment.MessageId = request.MessageId;
         fulfillment.CorrelationId = request.CorrelationId;
         fulfillment.ExternalRequestId = payload.ExternalRequestId;

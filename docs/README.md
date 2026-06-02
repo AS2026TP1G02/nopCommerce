@@ -8,7 +8,7 @@ This folder contains the architecture artefacts for Assignment 2. Scenario C —
 
 **Current implementation evidence**: [Phase 1 plugin scaffold](evidence/phase-1-plugin-scaffold.md) records the code scope, schema created, exclusions, and remaining runtime verification.
 
-**Current consistency evidence**: [QA-2 POS consistency](evidence/qa-2-consistency.md) and [QA-3 plugin-side traceability](evidence/qa-3-traceability.md) document the Inbox + POS track.
+**Current consistency and traceability evidence**: [QA-2 POS consistency](evidence/qa-2-consistency.md) and [QA-3 order-to-fulfillment traceability](evidence/qa-3-traceability.md) document João Varela's closed QA-2 / QA-3 evidence track.
 
 ## Part 1 checkpoint
 

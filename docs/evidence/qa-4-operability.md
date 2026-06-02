@@ -230,9 +230,13 @@ wms.order.placed.dlq    0         0               0
 
 ## Current Conclusion
 
-Compose satisfies the infrastructure part of QA-4: RabbitMQ Management UI is
-published, all services reached healthy state, WMS/POS controls respond, WMS mode
-toggles work for every pressure mode, and queue/DLQ state can be inspected. The
-final QA-4 pass/fail measurement must wait for the plugin to publish real order
-messages, accept fulfillment callbacks, and expose pending fulfillment state in
-the admin view.
+QA-4 now passes end-to-end. The local Compose stack exposes RabbitMQ
+Management UI, queue depth, and DLQ state; the plugin admin exposes the live
+fulfillment projection counts including the `pending / degraded` operability
+signal; and both views remained usable during degradation and after recovery.
+
+The 2026-06-02 five-order degraded run demonstrated the intended operator path:
+WMS was switched to `unavailable`, RabbitMQ showed in-flight backlog, the plugin
+admin showed affected fulfillments as pending/degraded, and after WMS returned
+to `normal` the system recovered cleanly and the pending/degraded count fell
+back to `0`. Combined refresh remained within the `<= 5 s` target.

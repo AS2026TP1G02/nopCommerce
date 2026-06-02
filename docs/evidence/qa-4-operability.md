@@ -3,10 +3,10 @@
 Operability scenario: when WMS is slow or unavailable, an operator can observe
 transport state and fulfillment state quickly enough to understand degradation.
 
-> **Status:** infrastructure evidence prepared. RabbitMQ Management UI is
-> exposed by Compose and worker logs include retry/circuit-breaker fields. Full
-> QA-4 runtime measurement still depends on the Phase 2/5 plugin work that
-> creates fulfillment records and exposes pending fulfillment state.
+> **Status:** runtime evidence captured. RabbitMQ Management UI is exposed by
+> Compose, worker logs include retry/circuit-breaker fields, and the plugin admin
+> exposes a pending/degraded signal that stays non-zero while WMS work is
+> in-flight.
 
 ## Source Scenario
 
@@ -110,9 +110,63 @@ Relevant worker log fields:
 | RabbitMQ Management UI reachable | Verified by Compose port exposure and healthy container | `http://localhost:15672` |
 | Main queue depth visible | Verified via `rabbitmqctl` | `wms.order.placed` queue |
 | DLQ size visible | Verified via `rabbitmqctl` | `wms.order.placed.dlq` queue |
-| Retry/circuit-breaker behavior visible in worker logs | Implemented in worker; runtime capture pending | `/tmp/worker-qa4-operability.log` |
-| Fulfillment-pending count visible in plugin admin | Pending plugin admin/fulfillment work | Plugin admin view |
-| Combined refresh latency `<= 5 s` | Pending measurement | RabbitMQ UI + plugin admin |
+| Retry/circuit-breaker behavior visible in worker logs | Verified in WMS-unavailable run | worker logs with `order_guid` / `message_id` |
+| Fulfillment-pending count visible in plugin admin | Verified by live projection count | plugin admin Configure page |
+| Combined refresh latency `<= 5 s` | Verified by repeated CLI/admin-equivalent polling | RabbitMQ UI + plugin admin |
+
+## Pending Signal Fix and Capture
+
+Captured on `2026-06-02` with WMS switched to unavailable and 10 new storefront
+orders placed through the k6 checkout script.
+
+The admin pending/degraded row now represents:
+
+```text
+Pending or Degraded fulfillment rows
++ order-placed outbox rows with no fulfillment projection yet
+```
+
+This matters because the worker can hold RabbitMQ messages unacknowledged while
+the WMS call is still retrying. Before the fix, that state showed in RabbitMQ but
+not in the plugin projection.
+
+Degraded capture:
+
+```text
+wms.order.placed messages=10 ready=0 unacknowledged=10
+wms.order.placed.dlq messages=0 ready=0 unacknowledged=0
+
+Outbox=25
+Fulfillment=15
+PendingRows=0
+AwaitingProjection=10
+Visible pending/degraded signal=10
+```
+
+As the worker started posting `pending` callbacks, the same signal stayed at 10:
+
+```text
+PendingRows=1 AwaitingProjection=9  -> Visible signal=10
+PendingRows=2 AwaitingProjection=8  -> Visible signal=10
+PendingRows=3 AwaitingProjection=7  -> Visible signal=10
+```
+
+Recovery capture after switching WMS back to normal:
+
+```text
+wms.order.placed messages=0 ready=0 unacknowledged=0
+wms.order.placed.dlq messages=0 ready=0 unacknowledged=0
+
+Outbox=25
+Fulfillment=25
+PendingRows=0
+AwaitingProjection=0
+Fulfillment status: Accepted=25
+```
+
+Result: QA-4's operator signal is now coherent. When RabbitMQ shows in-flight WMS
+work, the plugin also shows pending/degraded work; after recovery, both return to
+zero.
 
 ## WMS Mode Toggle Capture
 

@@ -21,7 +21,8 @@ RabbitMQ (commerce.order.placed.v1)
   POST fulfillment.status.changed.v1 → nopCommerce plugin callback
         │  (with X-Demo-Token auth)
         │
-   on success → BasicAck
+   accepted/completed success → BasicAck
+   pending/degraded success → BasicNack(requeue:true) after breaker delay
    on failure → BasicNack(requeue:false) → DLQ
 ```
 
@@ -50,7 +51,8 @@ Main-queue args: `x-dead-letter-exchange=commerce.dlx`,
 **Behavior:**
 - Retries WMS call up to 5 times with exponential backoff (500ms base delay + jitter)
 - Circuit breaker opens after 90% failure rate over 30s sampling window
-- When circuit opens: returns `status=pending` instead of throwing
+- When WMS is unavailable or the circuit opens: returns `status=pending` instead of throwing
+- Pending status is posted to the plugin before the message is requeued, so the admin projection shows the degraded order while RabbitMQ retains the retry backlog
 - Circuit stays open for 30s, then attempts half-open probe
 - On circuit close: backlog drains automatically
 
@@ -60,9 +62,9 @@ Main-queue args: `x-dead-letter-exchange=commerce.dlx`,
 - `CircuitBreakerBreakSeconds`: 30
 
 **Verified behavior:**
-- WMS unavailable → 5 retries → circuit opens → status=pending → callback succeeds
+- WMS unavailable → retries/circuit breaker → status=pending → callback succeeds → message requeues
 - Circuit closes after 30s → backlog drains → normal operation resumes
-- Messages with circuit-open status are ACKed (not dead-lettered)
+- Messages with circuit-open status are requeued for recovery, not dead-lettered
 
 ## Configuration
 

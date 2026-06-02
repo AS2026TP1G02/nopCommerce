@@ -23,7 +23,7 @@ public record ConfigurationModel : BaseNopModel
     public int FulfillmentRecords { get; set; }
 
     /// <summary>
-    /// Gets or sets the count of fulfillment rows still Pending or Degraded (QA-4)
+    /// Gets or sets the count of orders still awaiting fulfillment or marked Pending/Degraded (QA-4)
     /// </summary>
     public int PendingFulfillmentRecords { get; set; }
 

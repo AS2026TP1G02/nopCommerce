@@ -3,10 +3,10 @@
 Operability scenario: when WMS is slow or unavailable, an operator can observe
 transport state and fulfillment state quickly enough to understand degradation.
 
-> **Status:** infrastructure evidence prepared. RabbitMQ Management UI is
-> exposed by Compose and worker logs include retry/circuit-breaker fields. Full
-> QA-4 runtime measurement still depends on the Phase 2/5 plugin work that
-> creates fulfillment records and exposes pending fulfillment state.
+> **Status:** complete. Re-measured on 2026-06-02 with a 5-order degraded run.
+> RabbitMQ Management UI and the plugin admin page both exposed the required
+> operability signals, and the combined refresh latency remained within the
+> `<= 5 s` target.
 
 ## Source Scenario
 
@@ -107,12 +107,38 @@ Relevant worker log fields:
 
 | Operability item | Current status | Evidence |
 |------------------|----------------|----------|
-| RabbitMQ Management UI reachable | Verified by Compose port exposure and healthy container | `http://localhost:15672` |
-| Main queue depth visible | Verified via `rabbitmqctl` | `wms.order.placed` queue |
-| DLQ size visible | Verified via `rabbitmqctl` | `wms.order.placed.dlq` queue |
-| Retry/circuit-breaker behavior visible in worker logs | Implemented in worker; runtime capture pending | `/tmp/worker-qa4-operability.log` |
-| Fulfillment-pending count visible in plugin admin | Pending plugin admin/fulfillment work | Plugin admin view |
-| Combined refresh latency `<= 5 s` | Pending measurement | RabbitMQ UI + plugin admin |
+| RabbitMQ Management UI reachable | Pass | `http://localhost:15672`; see screenshot `docs/evidence/assets/qa-4/rabbit.png` |
+| Main queue depth visible | Pass | `wms.order.placed` visible in RabbitMQ Management UI during degraded run; see `docs/evidence/assets/qa-4/rabbit.png` |
+| DLQ size visible | Pass | `wms.order.placed.dlq` visible alongside the main queue; see `docs/evidence/assets/qa-4/rabbit.png` |
+| Retry/circuit-breaker behavior visible in worker logs | Pass | worker logs show retry and breaker transitions during the WMS-unavailable window; capture path `/tmp/worker-qa4-operability.log` |
+| Fulfillment-pending count visible in plugin admin | Pass | degraded capture shows pending / degraded `> 0`; recovered capture shows pending / degraded `= 0`; see `docs/evidence/assets/qa-4/omni_off.png` and `docs/evidence/assets/qa-4/omni_on.png` |
+| Combined refresh latency `<= 5 s` | Pass | RabbitMQ UI and plugin admin reflected degradation/recovery within approximately `2-3 s` after refresh |
+
+## Runtime Measurement Capture
+
+Captured on the local Compose stack on 2026-06-02 with WMS set to
+`unavailable`, five storefront orders placed during the outage window, and WMS
+then returned to `normal`.
+
+Observed operator-facing evidence:
+
+- RabbitMQ Management UI showed the `wms.order.placed` queue accumulating
+  in-flight work while WMS was unavailable; `wms.order.placed.dlq` remained
+  visible for dead-letter inspection.
+- Plugin admin (`/Admin/OmnichannelCore/Configure`) showed the live fulfillment
+  projection counts, including the `pending / degraded` operability row.
+- During degradation, the plugin admin pending/degraded count rose above zero,
+  proving that the operator can see affected fulfillments directly from the
+  admin page.
+- After WMS returned to `normal`, the worker drained the backlog and the plugin
+  admin pending/degraded count returned to `0`, proving recovery was visible
+  from the same operator workflow.
+
+Screenshot set:
+
+- RabbitMQ queues during the QA-4 run: `docs/evidence/assets/qa-4/rabbit.png`
+- Plugin admin during degradation (`pending / degraded` visible): `docs/evidence/assets/qa-4/omni_off.png`
+- Plugin admin after recovery (`pending / degraded = 0`): `docs/evidence/assets/qa-4/omni_on.png`
 
 ## WMS Mode Toggle Capture
 
@@ -176,9 +202,13 @@ wms.order.placed.dlq    0         0               0
 
 ## Current Conclusion
 
-Compose satisfies the infrastructure part of QA-4: RabbitMQ Management UI is
-published, all services reached healthy state, WMS/POS controls respond, WMS mode
-toggles work for every pressure mode, and queue/DLQ state can be inspected. The
-final QA-4 pass/fail measurement must wait for the plugin to publish real order
-messages, accept fulfillment callbacks, and expose pending fulfillment state in
-the admin view.
+QA-4 now passes end-to-end. The local Compose stack exposes RabbitMQ
+Management UI, queue depth, and DLQ state; the plugin admin exposes the live
+fulfillment projection counts including the `pending / degraded` operability
+signal; and both views remained usable during degradation and after recovery.
+
+The 2026-06-02 five-order degraded run demonstrated the intended operator path:
+WMS was switched to `unavailable`, RabbitMQ showed in-flight backlog, the plugin
+admin showed affected fulfillments as pending/degraded, and after WMS returned
+to `normal` the system recovered cleanly and the pending/degraded count fell
+back to `0`. Combined refresh remained within the `<= 5 s` target.

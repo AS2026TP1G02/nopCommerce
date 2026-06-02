@@ -38,6 +38,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-02 — Map WMS 409 contradiction to fulfillment `Rejected` (no silent DLQ)
+
+**Phase**: 3 + 4 (resilience + consistency edge case).
+**Driver**: ADR-0007 (projection-first stock → an oversell/contradiction must be made *visible*, not silently dropped); QA-1 (retry/circuit-breaker budget must not be spent on non-transient faults).
+**Files**: `services/worker/WmsClient.cs:59-140` (409 handled inside the resilience pipeline; `Reason` added to `WmsFulfillmentResponse`; new `WmsErrorResponse`/`WmsErrorDetail` records for the FastAPI `{"detail":{"error":…}}` body).
+**Change**: When the WMS returns HTTP 409 (`inventory_contradiction`), the worker now *returns* a `rejected` outcome from inside the Polly delegate — instead of letting `EnsureSuccessStatusCode` throw — and posts a `fulfillment.status.changed` callback with `Status="rejected"` plus the WMS reason. The plugin already maps `"rejected"` → `OmniFulfillmentStatus.Rejected` (`OmniFulfillmentService.cs:113`) and the consumer acks any non-`pending` outcome, so an unfulfillable order now surfaces as `Rejected` (with reason) in the admin trace rather than dead-lettering with the row stuck `Pending`. Activates the previously-dead `Rejected = 50` status.
+**Tradeoff/risk introduced**: by design, a returned result is not an exception, so a per-order stock contradiction no longer counts toward the circuit breaker or burns retry attempts (a contradiction is a business outcome, not a WMS-health signal). A business rejection now depends on the plugin callback being reachable, exactly like every other status update.
+**Verification**: `dotnet build services/worker/Worker.csproj -c Debug` via the `mcr.microsoft.com/dotnet/sdk:10.0` image → 0 warnings / 0 errors; plugin path confirmed by reading (`MapStatus` "rejected"→`Rejected`, `ValidateFulfillment` accepts the status, consumer else-branch acks). Live `contradictory`-mode run still pending: set WMS `/mode/contradictory`, place an order, expect `OmniOrderFulfillment.StatusId = 50` + `Reason = inventory_contradiction` and `wms.order.placed.dlq` staying at 0.
+
 ## 2026-06-02 — Prove E2E on develop + capture QA-5 outbox latency
 
 **Phase**: 2 + 6 (E2E gate + evidence).

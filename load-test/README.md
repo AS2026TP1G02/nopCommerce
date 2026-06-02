@@ -28,6 +28,8 @@ BASE_URL=http://localhost:5000 k6 run automated-order-placement.js
 
 - `automated-order-placement.js`: full add-to-cart + one-page-checkout + order placement flow
 - `simple-order-test.js`: smoke test that generates HTTP traffic only
+- `single-order-test.js`: places exactly one guest-checkout order (deterministic; prints the order id)
+- `single-order-rejected.sh`: end-to-end WMS-contradiction → fulfillment `Rejected` check (see below)
 - `verify-nopcommerce-config.sh`: basic readiness checks for automated ordering
 - `run-load-test.sh`: convenience wrapper around `k6`
 
@@ -44,6 +46,28 @@ Or run directly:
 ```bash
 cd load-test
 k6 run automated-order-placement.js
+```
+
+## Rejected scenario (WMS contradiction)
+
+Verifies that an order the warehouse cannot fulfil ends up `Rejected` rather than silently
+dead-lettered (see ADR-0007). Requires the full `docker compose` stack running.
+
+```bash
+cd load-test
+./single-order-rejected.sh
+```
+
+It sets the WMS simulator to `contradictory` (it returns HTTP 409 for every fulfillment), places one
+order, polls `OmniOrderFulfillment` until `StatusId = 50` (`Rejected`) with
+`Reason = inventory_contradiction`, checks the dead-letter queue stayed empty, and always restores
+the WMS to `normal`. The rejection is asynchronous — the outbox publishes on a 60 s tick — so allow
+up to ~2 minutes (tune with `TIMEOUT_SECONDS`, `POLL_INTERVAL`).
+
+To place a single order on its own (any WMS mode), without the rejection check:
+
+```bash
+k6 run single-order-test.js
 ```
 
 ## Required nopCommerce settings

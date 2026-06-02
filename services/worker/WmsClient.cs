@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using Omnichannel.Contracts;
 using Polly;
@@ -60,14 +61,36 @@ public sealed class WmsClient
             var response = await _pipeline.ExecuteAsync(async ct =>
             {
                 var http = await _httpClient.PostAsJsonAsync(_options.WmsFulfillmentPath, wmsRequest, ct);
+
+                // 409 Conflict = business rejection (oversell / stock contradiction). It is NOT a
+                // transient fault: returning here instead of throwing keeps the retry strategy and
+                // circuit breaker — whose ShouldHandle only match exceptions — from acting on it, so a
+                // per-order stock contradiction never trips the breaker or burns retry attempts.
+                if (http.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var error = await http.Content.ReadFromJsonAsync<WmsErrorResponse>(ct);
+                    return new WmsFulfillmentResponse
+                    {
+                        Status = "rejected",
+                        ExternalRequestId = string.Empty,
+                        Reason = error?.Detail?.Error ?? "wms_rejected",
+                        OrderGuid = order.OrderGuid
+                    };
+                }
+
                 http.EnsureSuccessStatusCode();
                 return await http.Content.ReadFromJsonAsync<WmsFulfillmentResponse>(ct)
                        ?? throw new InvalidOperationException("Empty WMS response");
             }, cancellationToken);
 
-            _logger.LogInformation(
-                "WMS accepted order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId}",
-                order.OrderGuid, message.MessageId, response.ExternalRequestId);
+            if (response.Status == "rejected")
+                _logger.LogWarning(
+                    "WMS rejected fulfillment order_guid={OrderGuid} message_id={MessageId} reason={Reason}",
+                    order.OrderGuid, message.MessageId, response.Reason);
+            else
+                _logger.LogInformation(
+                    "WMS accepted order_guid={OrderGuid} message_id={MessageId} external_request_id={ExternalRequestId}",
+                    order.OrderGuid, message.MessageId, response.ExternalRequestId);
 
             return new FulfillmentStatusChanged
             {
@@ -75,7 +98,7 @@ public sealed class WmsClient
                 OrderGuid = order.OrderGuid,
                 ExternalRequestId = response.ExternalRequestId,
                 Status = response.Status,
-                Reason = null
+                Reason = response.Reason
             };
         }
         catch (Polly.CircuitBreaker.BrokenCircuitException)
@@ -99,7 +122,20 @@ public sealed class WmsClient
     {
         public string ExternalRequestId { get; init; } = string.Empty;
         public string Status { get; init; } = string.Empty;
+        public string? Reason { get; init; }
         public Guid OrderGuid { get; init; }
         public Guid MessageId { get; init; }
+    }
+
+    // Matches the FastAPI 409 body, which nests the error under "detail":
+    // { "detail": { "error": "inventory_contradiction", "mode": "contradictory", ... } }
+    private sealed record WmsErrorResponse
+    {
+        public WmsErrorDetail? Detail { get; init; }
+    }
+
+    private sealed record WmsErrorDetail
+    {
+        public string Error { get; init; } = string.Empty;
     }
 }

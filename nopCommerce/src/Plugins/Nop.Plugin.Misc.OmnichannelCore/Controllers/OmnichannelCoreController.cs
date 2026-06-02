@@ -44,5 +44,67 @@ public class OmnichannelCoreController : BasePluginController
         return View("~/Plugins/Misc.OmnichannelCore/Views/Configure.cshtml", model);
     }
 
+    /// <summary>
+    /// Traceability lookup (QA-3): enter an OrderGuid → return the outbox/inbox/fulfillment
+    /// chain. Lookup only — no search, filters, or editing.
+    /// </summary>
+    [CheckPermission(StandardPermission.Configuration.MANAGE_PLUGINS)]
+    public virtual async Task<IActionResult> Trace(string orderGuid)
+    {
+        var model = new OrderTraceModel { OrderGuid = orderGuid };
+
+        if (string.IsNullOrWhiteSpace(orderGuid))
+            return View("~/Plugins/Misc.OmnichannelCore/Views/Trace.cshtml", model);
+
+        model.Searched = true;
+
+        if (!Guid.TryParse(orderGuid, out var parsedGuid))
+        {
+            model.InvalidGuid = true;
+            return View("~/Plugins/Misc.OmnichannelCore/Views/Trace.cshtml", model);
+        }
+
+        foreach (var outbox in await _omnichannelCoreService.GetOutboxMessagesByOrderGuidAsync(parsedGuid))
+        {
+            model.OutboxMessages.Add(new OrderTraceModel.OutboxRow
+            {
+                Id = outbox.Id,
+                MessageId = outbox.MessageId.ToString("D"),
+                CorrelationId = outbox.CorrelationId,
+                EventType = outbox.EventType,
+                Status = outbox.Status.ToString(),
+                RetryCount = outbox.RetryCount,
+                LastError = outbox.LastError,
+                CreatedOnUtc = outbox.CreatedOnUtc,
+                PublishedOnUtc = outbox.PublishedOnUtc
+            });
+        }
+
+        foreach (var inbox in await _omnichannelCoreService.GetInboxMessagesByOrderGuidAsync(parsedGuid))
+        {
+            model.InboxMessages.Add(new OrderTraceModel.InboxRow
+            {
+                Id = inbox.Id,
+                MessageId = inbox.MessageId.ToString("D"),
+                CorrelationId = inbox.CorrelationId,
+                EventType = inbox.EventType,
+                Status = inbox.Status.ToString(),
+                ReceivedOnUtc = inbox.ReceivedOnUtc
+            });
+        }
+
+        var fulfillment = await _omnichannelCoreService.GetFulfillmentByOrderGuidAsync(parsedGuid);
+        if (fulfillment != null)
+        {
+            model.HasFulfillment = true;
+            model.FulfillmentStatus = fulfillment.Status.ToString();
+            model.ExternalRequestId = fulfillment.ExternalRequestId;
+            model.TrackingNumber = fulfillment.TrackingNumber;
+            model.FulfillmentReason = fulfillment.Reason;
+        }
+
+        return View("~/Plugins/Misc.OmnichannelCore/Views/Trace.cshtml", model);
+    }
+
     #endregion
 }

@@ -19,9 +19,32 @@ All omnichannel integration code lives in two units **outside** the nopCommerce 
 
 `Nop.Services`, `Nop.Data`, and `Nop.Core` remain unchanged. The plugin and worker communicate with nopCommerce via in-process domain events (inbound) and HTTP callbacks (outbound); they communicate with each other via RabbitMQ and HTTP (no shared DB — see ADR-0005). nopCommerce is treated as a *customer/supplier* peer over versioned event contracts (`commerce.order.placed.v1`, `pos.stock.changed.v1`, `fulfillment.status.changed.v1`), not as a substrate to be carved up.
 
+## Wire contract (frozen envelope)
+
+Every message crossing the plugin↔worker boundary (over RabbitMQ or the HTTP callbacks) is the same **envelope + nested payload** shape — the `MessageEnvelope` / `IntegrationMessage<TPayload>` defined in `services/contracts/Envelope.cs` and consumed by both sides. This is the boundary contract; both the plugin's `OutboxMessageFactory` and the worker serialize/deserialize to it, so neither can drift on shape.
+
+```jsonc
+{
+  "messageId": "<guid>",          // envelope: unique per message
+  "correlationId": "<guid>",      // envelope: stable per order chain
+  "eventType": "commerce.order.placed.v1",  // or fulfillment.status.changed.v1 / pos.stock.changed.v1
+  "occurredOnUtc": "<iso-8601>",
+  "source": "nopcommerce | worker | pos-sim",
+  "payload": { /* typed body, one of the records in services/contracts/Events.cs */ }
+}
+```
+
+Payload bodies (camelCase, `JsonSerializerDefaults.Web`):
+- `commerce.order.placed.v1` → `{ orderId, orderGuid, storeId, customerId, currency, totalAmount, lines:[{ productId, sku, quantity, unitPrice }] }`
+- `fulfillment.status.changed.v1` → `{ orderGuid, externalRequestId, status, reason }`
+- `pos.stock.changed.v1` → `{ sourceVersion, productId, sku, warehouseId, quantityOnHand }`
+
+> **History:** an earlier plugin iteration emitted a *flat* payload (domain fields at the top level, `items` instead of `payload.lines`), which silently disagreed with the worker's nested envelope and dead-lettered orders. The contract above is the frozen, end-to-end-verified shape; `docs/evidence/sample-commerce-order-placed-v1.json` mirrors it.
+
 ## Consequences
 
 - Commerce state (orders, catalog, stock) stays in the nopCommerce DB owned by nopCommerce services. ADR-0002 is preserved.
+- The envelope above is the **only** boundary contract; changing a payload is a versioned-event change (`...v2`), reviewed cross-pair (Pair A + Pair B).
 - The plugin is the only code that talks to both nopCommerce internals and the integration boundary, which makes the boundary auditable in one place.
 - The worker can be deployed, restarted, and scaled independently from nopCommerce.
 - Architectural discussion focuses on integration quality (resilience, consistency, traceability) rather than decomposition mechanics.

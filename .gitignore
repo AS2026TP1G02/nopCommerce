@@ -1,0 +1,15 @@
+# Build output for the standalone .NET services (worker, contracts, pos-sim).
+# nopCommerce/ has its own .gitignore that covers its subtree.
+services/**/bin/
+services/**/obj/
+
+# Generated / runtime nopCommerce App_Data. nopCommerce/.gitignore already scopes its
+# own subtree; these are a root-level safety net for runtime files only (NOT a broad
+# **/App_Data/ rule, which would mask tracked seed data like Localization/Install).
+**/App_Data/appsettings.json
+**/App_Data/dataSettings.json
+**/App_Data/plugins.json
+**/App_Data/installedPlugins.json
+**/App_Data/Logs/
+**/App_Data/DataProtectionKeys/
+**/App_Data/TempUploads/

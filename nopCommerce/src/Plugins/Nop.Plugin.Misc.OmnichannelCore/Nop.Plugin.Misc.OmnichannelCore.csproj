@@ -10,13 +10,28 @@
     <RepositoryType>Git</RepositoryType>
     <OutputPath>$(SolutionDir)\Presentation\Nop.Web\Plugins\Misc.OmnichannelCore</OutputPath>
     <OutDir>$(OutputPath)</OutDir>
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <!--
+      Must be true because this plugin ships a NuGet dependency (RabbitMQ.Client) for
+      the outbox publisher (ADR-0003), so the package DLL is emitted into the plugin
+      output. ClearPluginAssemblies (NopTarget below) deletes from the plugin folder
+      only those DLLs whose names ALSO appear in the core Nop.Web output (i.e. it
+      de-duplicates assemblies the host already provides — see
+      Build/src/ClearPluginAssemblies/Program.cs). RabbitMQ.Client is not referenced
+      by core, so it is not in that list and survives, remaining loadable at runtime.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- RabbitMQ client for the outbox publisher (ADR-0003). -->
+    <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="plugin.json" />
     <None Remove="Views\Configure.cshtml" />
+    <None Remove="Views\Trace.cshtml" />
     <None Remove="Views\_ViewImports.cshtml" />
   </ItemGroup>
 
@@ -25,6 +40,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Views\Configure.cshtml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Views\Trace.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Views\_ViewImports.cshtml">

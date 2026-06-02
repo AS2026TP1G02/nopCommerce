@@ -38,6 +38,33 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-02 — Align plugin↔worker envelope contract + close out roldão's Phase-2/5/6 deliverables
+
+**Phase**: 2 + 5 + 6 (integration boundary + traceability + ADRs).
+**Driver**: ADR-0009 (plugin-worker boundary / envelope), ADR-0008 (3-ID correlation), ADR-0007 (projection-first); QA-3 (traceability), QA-5 (async spine).
+**Files**: merged `origin/develop` (took the worker + `services/contracts` from develop = António's lane; dropped my stopgap `NopCallbackClient.cs`); plugin `Services/OutboxMessageFactory.cs` + `Models/Callbacks/FulfillmentStatusChangedRequest.cs` (+`FulfillmentStatusChangedPayload`) + `Controllers/OmnichannelCallbackController.cs` + `Services/OmniFulfillmentService.cs` (nested envelope, both directions); `ScheduleTasks/OutboxPublisherTask.cs` (publish-success + error logs now carry the 3 IDs); `Views/Trace.cshtml` (worker-attempts pointer); `docs/adr/0009-...md` (frozen envelope), `docs/adr/0007-...md` (Part-2 outcome), `docs/evidence/sample-commerce-order-placed-v1.json` (nested); plugin tests; `plan.md` (roldão checkboxes).
+**Change**: Conformed the plugin to the shared nested `IntegrationMessage<TPayload>` envelope that the worker consumes — both `commerce.order.placed.v1` (plugin→worker) and `fulfillment.status.changed.v1` (worker→plugin). **Corrects the 2026-05-30 entry's claim that the "flattened" wire contract made plugin/worker/samples agree**: they had in fact diverged (plugin flat vs worker nested), which dead-lettered orders; the frozen contract is now the nested envelope, documented in ADR-0009. Also closed roldão's remaining plan items: outbox publish now logs success + failure with `order_guid`/`message_id`; admin Trace view points to worker attempts (RabbitMQ UI / worker logs by MessageId); ADR-0007 records the projection-only Part-2 outcome.
+**Tradeoff/risk introduced**: Payload change is a Pair A↔B boundary change (versioned event) — conforms to António's contract; flagged for his review. The plugin still logs via interpolated strings (nopCommerce `ILogger` has no structured-template API), but field names match the worker so QA-3 grep works.
+**Verification**: plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` → 0 errors; `dotnet test --filter ~OmnichannelCore` → 12/12 pass. Live `docker compose up --build`: published a nested `commerce.order.placed.v1` → worker deserialized it → WMS accepted (`WMS-REQ-8888`) → fulfillment callback **HTTP 200** → `OmniOrderFulfillment` Accepted + inbox Processed, **DLQ = 0**, both directions confirmed (OrderGuid `b8d5dd64-…`). Local only — not pushed.
+
+## 2026-06-01 — Fix compose so scheduled tasks auto-fire + install persists
+
+**Phase**: fixup (infra; resolves the scheduler-port risk flagged in the entry below).
+**Driver**: QA-5 (outbox auto-publishes on schedule, no manual trigger) and operability.
+**Files**: `docker-compose.yml` — `nopcommerce` now sets `ASPNETCORE_URLS=http://+:8080`, maps `8080:8080`, healthcheck on `:8080`, and mounts a new `nopcommerce_appdata` volume at `/app/App_Data`; `worker`/`pos-sim` base URLs → `http://nopcommerce:8080`.
+**Change**: (1) Aligned the container's listening port to 8080 so it matches the store URL (`http://localhost:8080`, set at install) that `TaskScheduler.cs` uses for its self-POST to `/scheduletask/runtask` — Kestrel was on :80, so the self-call was refused and scheduled tasks never auto-fired. (2) Added a persistent `App_Data` volume so recreating the container no longer drops the install marker (`appsettings.json` connection string + `plugins.json`) while the SQL DB stays populated — that mismatch caused "Sequence contains more than one element" when the install wizard re-ran against a populated DB.
+**Tradeoff/risk introduced**: One-time `docker compose down -v` was needed to clear the half-installed state created before the volume existed (Diogu's compose lane — note for fresh clones: install state now persists in the `nopcommerce_appdata` volume).
+**Verification**: `docker compose up` (6/6 healthy); placed an order and waited — outbox auto-published on the 60 s scheduler tick (`/scheduletask/runtask` → HTTP 204, `ScheduleTask.LastStartUtc` now advances; previously NULL with `Connection refused`) → worker → WMS → `OmniOrderFulfillment` Accepted + inbox Processed, all linked by OrderGuid `93fd84e7-…`, with NO manual task trigger. Install survives container recreate. Local only — not pushed.
+
+## 2026-06-01 — Integrate outbox/trace branch with develop: build fixes, tests, full E2E smoke
+
+**Phase**: 2 + 5 (verification/fixup of the 2026-05-30 outbox work).
+**Driver**: QA-5 (order→outbox, no synchronous external HTTP on checkout), QA-3 (OrderGuid traceability); fixup of the unverified 2026-05-30 entry.
+**Files**: merged `origin/develop` into `feat/outbox-order-placement-and-status-updates` (kept the branch's superset `OmnichannelCoreDefaults.cs` + `OrderPlacedOutboxConsumer.cs` over develop's "fixing compose" additions); `OmnichannelCorePlugin.cs` (+`using Nop.Services.Helpers;`), `OmnichannelCoreService.cs` (+3 OrderGuid trace read methods), `OrderPlacedOutboxConsumer.cs` (+`using Nop.Services.Events;`); `nopCommerce/src/Tests/Nop.Tests/Nop.Plugin.Misc.OmnichannelCore.Tests/**` + `Nop.Tests.csproj`.
+**Change**: Brought the outbox/fulfillment/trace branch up to date with develop and made it actually build on .NET 10. The 2026-05-30 work was committed unverified and had three compile defects: missing `using Nop.Services.Events;` (IConsumer) and `using Nop.Services.Helpers;` (IWebHelper), and a Phase-5 Trace action that called three `OmnichannelCoreService` read methods that were never implemented (now added). Added unit/controller tests for `OmniFulfillmentService` and the fulfillment callback.
+**Tradeoff/risk introduced**: Infra finding (not plugin code): nopCommerce's task scheduler self-POSTs to `http://localhost:8080/scheduletask/runtask`, but the container listens on :80 (compose maps host 8080→80) → scheduled tasks never auto-fire in compose. Worked around by triggering the publisher manually; for the demo, run tasks via admin "Run now" or fix the scheduler base URL / container port (Diogu's compose lane).
+**Verification**: Plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` with 0 errors; `dotnet test --filter ~OmnichannelCore` → 5/5 passed. Full live `docker compose up --build` (6/6 containers healthy): order placed (OrderId 6, OrderGuid `892cee56-…`) → `OmniOutboxMessage` Pending→Published (publisher confirms, no error) → RabbitMQ → worker → WMS sim (accepted, `WMS-REQ-6`) → fulfillment callback POST → HTTP 200 → `OmniOrderFulfillment` Accepted + `OmniInboxMessage` Processed; all three artifacts linkable by OrderGuid (QA-3). Local only — not pushed.
+
 ## 2026-06-01 — QA-2 unit + controller tests for inbox dedup and stock staleness
 
 **Phase**: 4.
@@ -46,6 +73,26 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Change**: Added the QA-2 test suite — `OmniInboxService` dedup, `OmniStockSyncService` newer-vs-stale `sourceVersion` projection, and `OmnichannelCallbackController` happy/duplicate/stale/unauthorized paths — backed by an in-memory `IRepository<T>` double; linked the plugin sources into `Nop.Tests` via `<Compile Include>` since the plugin is not a normal project reference. Ported from the `feat/qa2-inbox-pos-consistency` branch and adapted to the implementation already on `develop` (which superseded the branch's parallel reimplementation via the repo reorganization).
 **Tradeoff/risk introduced**: Tests exercise the services/controller directly with an in-memory repository (no LinqToDB provider), so they validate logic, not SQL translation or the missing `OmniInboxMessage.MessageId` unique constraint (residual race noted in the 2026-05-15 entry).
 **Verification**: `dotnet test nopCommerce/src/Tests/Nop.Tests/Nop.Tests.csproj --filter FullyQualifiedName~OmnichannelCore` (run in the `mcr.microsoft.com/dotnet/sdk:10.0` container, since the host has only the .NET 9 SDK while `global.json` pins 10.0.100) — full Nop.Web build succeeded, **7/7 tests passed** in ~1.5 s, including the duplicate-rejection ≤50 ms QA-2 threshold check.
+
+## 2026-05-30 — Phase 2 async spine + Phase 5 admin trace (outbox track)
+
+**Phase**: 2 (outbox/async path) and 5 (traceability).
+**Driver**: ADR-0003 (outbox + RabbitMQ), ADR-0008 (3-ID correlation), ADR-0011 (consumer + reconciler), ADR-0007 (projection-first, status note updated); QA-5 (outbox ≤100 ms, no sync external HTTP in checkout), QA-3 (admin trace), QA-1 (resilience spine).
+**Files**:
+
+- Wire contract flattened: `services/contracts/Envelope.cs`, `services/contracts/Events.cs`; worker aligned `services/worker/OrderPlacedConsumer.cs`, `services/worker/WmsClient.cs`.
+- Plugin outbox: `.../OmnichannelCore/Services/OrderPlacedOutboxConsumer.cs` (IConsumer<OrderPlacedEvent> → outbox row with items), `.../Services/OutboxMessageFactory.cs` (shared payload builder, consumer + reconciler), `.../ScheduleTasks/OutboxPublisherTask.cs` (real RabbitMQ publish + publisher confirms), `.../ScheduleTasks/OutboxReconcilerTask.cs` (back-fill via factory).
+- Plugin fulfillment callback: `.../Controllers/OmnichannelCallbackController.cs` (`POST /omnichannel/callbacks/fulfillment/status-changed`), `.../Models/Callbacks/FulfillmentStatusChangedRequest.cs`, `.../Services/OmniFulfillmentService.cs` (upsert `OmniOrderFulfillment`, 3-ID logging).
+- Plugin admin trace (QA-3): `.../Controllers/OmnichannelCoreController.cs` (`Trace`), `.../Models/OrderTraceModel.cs`, `.../Views/Trace.cshtml`, read methods in `.../Services/OmnichannelCoreService.cs`.
+- Wiring/config: `.../OmnichannelCoreDefaults.cs` (event types, RabbitMqUri, exchange/routing-key, task metadata), `.../Infrastructure/PluginNopStartup.cs` (DI for new services), `.../OmnichannelCorePlugin.cs` (register/remove schedule tasks on install/uninstall), `.../Nop.Plugin.Misc.OmnichannelCore.csproj` (RabbitMQ.Client ref + CopyLocalLockFileAssemblies=true).
+- Worker loop closed: `services/worker/NopCallbackClient.cs`, `services/worker/Program.cs` (DI). *(worker-side POST is Pair-B/António's lane — added to complete the loop; flagged for his review.)*
+- Docs: `docs/architecture-report.md` (new, required artifact), `docs/adr/0007-...md` (Part-2 status note), `docs/adr/0005-...md` (demo-token note).
+
+**Change**: Implemented the durable async order→WMS→fulfillment path (outbox + publisher-confirm publish + reconciler), the inbound fulfillment callback that lands `OmniOrderFulfillment` in `Accepted`, and the admin OrderGuid trace view. Flattened the order-placed wire contract so plugin/worker/WMS-sim/JSON-samples agree.
+
+**Tradeoff/risk introduced**: (1) outbox publisher opens a RabbitMQ connection per task run — fine at demo cadence, not tuned for load. (2) fulfillment upsert is one row per OrderGuid (last-writer-wins on status) — no per-attempt history table. (3) worker typed HttpClients captured by the singleton hosted service (pre-existing pattern; demo-acceptable).
+
+**Verification**: NOT yet run — local SDK is 9.x, repo targets net10.0, so build/run must be done via the Docker images (`dotnet/sdk:10.0-alpine`). Pending: `docker compose up --build`; place order → outbox Pending→Published → RabbitMQ `wms.order.placed` → worker → WMS → fulfillment callback → `OmniOrderFulfillment` Accepted; admin Trace by OrderGuid returns the chain; install/uninstall round-trip. Recorded here as the explicit open verification step before Phase 2/5 gates can flip to Done.
 
 ## 2026-05-15 — Inbox + POS consistency track
 

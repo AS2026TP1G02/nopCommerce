@@ -5,9 +5,9 @@ checkout continues. After WMS returns to normal, the backlog drains without
 manual intervention.
 
 > **Status:** measurement template prepared. Runtime numbers are not captured
-> yet because the Phase 2 order path still requires plugin work:
-> `OutboxPublisherTask.PublishAsync(...)` needs to publish to RabbitMQ, and the
-> plugin needs a `fulfillment.status.changed.v1` callback endpoint.
+> yet, but the Phase 2 happy path prerequisite is now confirmed by a real
+> `OmniOrderFulfillment` row captured on 2026-06-02. QA-1 still needs the
+> degraded-window measurements, queue snapshots, and backlog-drain timing.
 
 ## Source Scenario
 
@@ -60,6 +60,39 @@ Confirm the plugin E2E prerequisites before running the measurement:
 - `OmnichannelCallbackController` has a worker fulfillment callback endpoint.
 - A normal storefront order produces an `OmniOrderFulfillment` row with state
   `Accepted`.
+
+### Confirmed Normal-Flow Prerequisite
+
+The following SQL capture, taken on 2026-06-02 after placing a storefront
+order, confirms that the normal fulfillment path reached the plugin projection:
+
+```sql
+SELECT TOP 10
+    Id,
+    OrderGuid,
+    OrderId,
+    StatusId,
+    ExternalRequestId,
+    AcceptedOnUtc,
+    UpdatedOnUtc
+FROM OmniOrderFulfillment
+ORDER BY Id DESC;
+```
+
+Observed result:
+
+```text
+Id          OrderGuid                            OrderId     StatusId    ExternalRequestId    AcceptedOnUtc                  UpdatedOnUtc
+----------- ------------------------------------ ----------- ----------- -------------------- ------------------------------ ------------------------------
+1002        CBADAE7B-1FDE-4809-B94A-F10D37440F15 2001        30          WMS-REQ-2001         2026-06-02 12:14:58.131000   2026-06-02 12:14:58.131000
+```
+
+Interpretation:
+
+- `OmniOrderFulfillment` contains a row for a real order.
+- `ExternalRequestId` was returned from WMS.
+- The worker callback updated the plugin-side fulfillment projection.
+- QA-1 can proceed, provided the stack remains healthy during the pressure run.
 
 ## Pressure Run Procedure
 
@@ -129,6 +162,8 @@ Planned capture paths:
 
 ## Current Conclusion
 
-Not measured yet. The WMS simulator and Compose infrastructure are ready for the
-pressure scenario, but the runtime QA-1 claim must wait until the plugin
-publishes outbox rows to RabbitMQ and accepts worker fulfillment callbacks.
+Not fully measured yet. The WMS simulator and Compose infrastructure are ready,
+and at least one normal order has already reached `OmniOrderFulfillment`.
+Remaining work is the degraded-window run itself: capture checkout P95 under WMS
+`503`, record queue buildup, measure drain time after recovery, and confirm no
+orders stay pending for more than 5 minutes.

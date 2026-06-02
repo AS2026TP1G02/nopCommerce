@@ -102,9 +102,6 @@ public sealed class OrderPlacedConsumer : BackgroundService
                 await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true);
                 return;
             }
-            // Wait a bit before requeuing to avoid tight loop                                                                                                                                 
-            await Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
-
             await PostFulfillmentCallbackAsync(message, fulfillment, CancellationToken.None);
 
             await channel.BasicAckAsync(args.DeliveryTag, multiple: false);

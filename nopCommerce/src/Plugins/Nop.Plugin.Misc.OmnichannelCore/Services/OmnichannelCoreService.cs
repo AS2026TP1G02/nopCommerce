@@ -1,4 +1,5 @@
 using Nop.Data;
+using Nop.Plugin.Misc.OmnichannelCore;
 using Nop.Plugin.Misc.OmnichannelCore.Domains;
 
 namespace Nop.Plugin.Misc.OmnichannelCore.Services;
@@ -71,16 +72,27 @@ public class OmnichannelCoreService
     }
 
     /// <summary>
-    /// Gets the count of fulfillment rows still Pending or Degraded (QA-4 operability:
+    /// Gets the count of orders still awaiting fulfillment or already marked degraded (QA-4 operability:
     /// the "fulfillment-pending count" surfaced in the admin alongside the RabbitMQ dashboard)
     /// </summary>
     /// <returns>A task that represents the asynchronous operation</returns>
     public virtual async Task<int> GetPendingFulfillmentCountAsync()
     {
-        return await _orderFulfillmentRepository.Table
+        var pendingOrDegradedRows = await _orderFulfillmentRepository.Table
             .Where(fulfillment => fulfillment.StatusId == (int)OmniFulfillmentStatus.Pending
                 || fulfillment.StatusId == (int)OmniFulfillmentStatus.Degraded)
             .CountAsync();
+
+        var awaitingProjectionRows = await _outboxMessageRepository.Table
+            .Where(message => message.EventType == OmnichannelCoreDefaults.OrderPlacedEventType
+                && message.OrderGuid.HasValue
+                && message.StatusId != (int)OmniOutboxMessageStatus.DeadLettered
+                && !_orderFulfillmentRepository.Table.Any(fulfillment => fulfillment.OrderGuid == message.OrderGuid.Value))
+            .Select(message => message.OrderGuid)
+            .Distinct()
+            .CountAsync();
+
+        return pendingOrDegradedRows + awaitingProjectionRows;
     }
 
     /// <summary>

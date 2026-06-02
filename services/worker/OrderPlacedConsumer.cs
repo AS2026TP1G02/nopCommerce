@@ -94,11 +94,18 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
-            // If circuit breaker is open (status=pending), wait before requeuing to avoid spam             
+            // Surface degraded state in the plugin before requeueing, so QA-4 can
+            // show pending fulfillment while RabbitMQ still owns the retry backlog.
             if (fulfillment.Status == "pending")
             {
+                await PostFulfillmentCallbackAsync(message, fulfillment, CancellationToken.None);
+
                 _logger.LogInformation(
-                "Circuit breaker open, requeuing message after delay order_guid={OrderGuid} message_id={MessageId}", message.Payload.OrderGuid, message.MessageId);
+                    "Fulfillment pending projected; requeueing after degraded delay order_guid={OrderGuid} message_id={MessageId}",
+                    message.Payload.OrderGuid,
+                    message.MessageId);
+
+                await Task.Delay(TimeSpan.FromSeconds(_options.CircuitBreakerBreakSeconds));
                 await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true);
                 return;
             }

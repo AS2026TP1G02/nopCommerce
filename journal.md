@@ -47,6 +47,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Tradeoff/risk introduced**: by design, a returned result is not an exception, so a per-order stock contradiction no longer counts toward the circuit breaker or burns retry attempts (a contradiction is a business outcome, not a WMS-health signal). A business rejection now depends on the plugin callback being reachable, exactly like every other status update.
 **Verification**: `dotnet build services/worker/Worker.csproj -c Debug` via the `mcr.microsoft.com/dotnet/sdk:10.0` image → 0 warnings / 0 errors; plugin path confirmed by reading (`MapStatus` "rejected"→`Rejected`, `ValidateFulfillment` accepts the status, consumer else-branch acks). Live `contradictory`-mode run still pending: set WMS `/mode/contradictory`, place an order, expect `OmniOrderFulfillment.StatusId = 50` + `Reason = inventory_contradiction` and `wms.order.placed.dlq` staying at 0.
 
+## 2026-06-02 — Fix pending/degraded operability signal during WMS outage
+
+**Phase**: 5 + 6 (admin operability + degraded runtime).
+**Driver**: QA-4 (pending/degraded visible while RabbitMQ has in-flight work), QA-1 (WMS unavailable recovery).
+**Files**: `nopCommerce/src/Plugins/Nop.Plugin.Misc.OmnichannelCore/Services/OmnichannelCoreService.cs`, `.../Models/ConfigurationModel.cs`, `.../Views/Configure.cshtml`, `nopCommerce/src/Tests/Nop.Tests/Nop.Tests.csproj`, `nopCommerce/src/Tests/Nop.Tests/Nop.Plugin.Misc.OmnichannelCore.Tests/OmnichannelCoreServiceTests.cs`, `services/worker/OrderPlacedConsumer.cs`, `services/worker/WmsClient.cs`, `services/worker/README.md`.
+**Change**: Fixed the admin pending/degraded count so it includes order-placed outbox rows that have no fulfillment projection yet, not just existing fulfillment rows with Pending/Degraded status. Fixed the worker degraded path to post a `pending` fulfillment callback before requeueing after the breaker delay; previously it requeued before the callback, leaving RabbitMQ with unacked messages while the plugin showed `0` pending.
+**Tradeoff/risk introduced**: Pending callbacks can be emitted before eventual Accepted callbacks for the same order; this is intentional and the fulfillment projection upserts by `OrderGuid`, so recovery advances the same row to Accepted.
+**Verification**: `docker compose build nopcommerce` → plugin build passed; `docker compose build worker` → worker publish passed; `dotnet test ... --filter FullyQualifiedName~OmnichannelCore` in .NET 10 SDK Docker → 15/15 passed. Live WMS-unavailable run with 10 new orders: RabbitMQ reached `wms.order.placed messages=10 unack=10`; admin-count inputs were `pendingRows=0/1/2/3` plus `awaitingProjection=10/9/8/7`, so the visible pending/degraded signal remained `10`. After WMS normal, queue/DLQ returned to `0`, fulfillment rows reached `25`, pending returned to `0`, all status `Accepted`.
+
 ## 2026-06-02 — Prove E2E on develop + capture QA-5 outbox latency
 
 **Phase**: 2 + 6 (E2E gate + evidence).

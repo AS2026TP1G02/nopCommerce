@@ -36,8 +36,11 @@
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Services\OmniInboxService.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Services\OmniInboxService.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Services\OmniStockSyncService.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Services\OmniStockSyncService.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Services\OmniFulfillmentService.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Services\OmniFulfillmentService.cs" />
+    <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Services\OmnichannelCoreService.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Services\OmnichannelCoreService.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniInboxMessage.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniInboxMessage.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniInboxMessageStatus.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniInboxMessageStatus.cs" />
+    <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOutboxMessage.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOutboxMessage.cs" />
+    <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOutboxMessageStatus.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOutboxMessageStatus.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniStockSyncState.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniStockSyncState.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniStockSyncStatus.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniStockSyncStatus.cs" />
     <Compile Include="..\..\Plugins\Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOrderFulfillment.cs" Link="Nop.Plugin.Misc.OmnichannelCore\Domains\OmniOrderFulfillment.cs" />

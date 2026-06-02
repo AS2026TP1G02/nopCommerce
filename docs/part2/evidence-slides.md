@@ -121,9 +121,9 @@ Caption: "3 s WMS delay → checkout still 311 ms → not on the checkout thread
 
 **SLIDE TEXT (paste as-is):**
 ```
-Duplicate rejected ≤ 50 ms           →  17.485 ms  ✅
-0 duplicate inbox / fulfillment rows →  inbox = 1 · fulfillment = 0  ✅
-Stale sourceVersion ignored          →  stock stays qty 5 / v45  ✅
+Duplicate rejected ≤ 50 ms                 →  17.5 ms  ✅
+Same event delivered twice → handled once  →  1 inbox row (not 2) · 0 order rows  ✅
+Out-of-order (stale) update ignored        →  v44 after v45 rejected · stock stays qty 5  ✅
 
 Normal POS update applied (HTTP 200, sourceVersion 41, qty 3).
 Same messageId re-sent → "duplicate"; inbox keeps 1 row.

@@ -101,10 +101,11 @@ public sealed class WmsClient
                 Reason = response.Reason
             };
         }
-        catch (Polly.CircuitBreaker.BrokenCircuitException)
+        catch (Exception exception) when (IsTransientWmsFailure(exception))
         {
             _logger.LogWarning(
-                "Circuit breaker open, marking fulfillment pending order_guid={OrderGuid} message_id={MessageId}",
+                exception,
+                "WMS unavailable, marking fulfillment pending order_guid={OrderGuid} message_id={MessageId}",
                 order.OrderGuid, message.MessageId);
 
             return new FulfillmentStatusChanged
@@ -113,9 +114,16 @@ public sealed class WmsClient
                 OrderGuid = order.OrderGuid,
                 ExternalRequestId = string.Empty,
                 Status = "pending",
-                Reason = "WMS unavailable - circuit breaker open"
+                Reason = "WMS unavailable or circuit breaker open"
             };
         }
+    }
+
+    private static bool IsTransientWmsFailure(Exception exception)
+    {
+        return exception is HttpRequestException
+            or TaskCanceledException
+            or Polly.CircuitBreaker.BrokenCircuitException;
     }
 
     private sealed record WmsFulfillmentResponse

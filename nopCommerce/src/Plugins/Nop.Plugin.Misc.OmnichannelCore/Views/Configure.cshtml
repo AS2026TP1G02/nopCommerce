@@ -33,7 +33,7 @@
                 <tbody>
                     <tr>
                         <td>OmniOutboxMessage</td>
-                        <td>Durable outbound events waiting for publication.</td>
+                        <td>Durable outbound event ledger, including pending and published messages.</td>
                         <td class="text-right">@Model.OutboxMessages</td>
                     </tr>
                     <tr>
@@ -48,7 +48,7 @@
                     </tr>
                     <tr>
                         <td>&nbsp;&nbsp;&#8627; pending / degraded</td>
-                        <td>Fulfillment rows still awaiting or degraded — operability signal (QA-4).</td>
+                        <td>Orders awaiting fulfillment projection or marked degraded — operability signal (QA-4).</td>
                         <td class="text-right">@Model.PendingFulfillmentRecords</td>
                     </tr>
                     <tr>

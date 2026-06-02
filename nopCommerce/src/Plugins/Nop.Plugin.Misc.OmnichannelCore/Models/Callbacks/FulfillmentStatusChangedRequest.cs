@@ -45,6 +45,11 @@ public record FulfillmentStatusChangedRequest
 public record FulfillmentStatusChangedPayload
 {
     /// <summary>
+    /// Gets or sets the related nopCommerce order identifier
+    /// </summary>
+    public int OrderId { get; set; }
+
+    /// <summary>
     /// Gets or sets the related nopCommerce order GUID
     /// </summary>
     public Guid OrderGuid { get; set; }

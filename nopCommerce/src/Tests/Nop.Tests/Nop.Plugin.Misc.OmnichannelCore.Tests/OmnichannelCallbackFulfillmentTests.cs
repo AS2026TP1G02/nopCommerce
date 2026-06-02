@@ -39,6 +39,7 @@ public class OmnichannelCallbackFulfillmentTests
         response.Applied.Should().BeTrue();
         response.Duplicate.Should().BeFalse();
         fixture.FulfillmentRepository.Entities.Should().ContainSingle();
+        fixture.FulfillmentRepository.Entities[0].OrderId.Should().Be(42);
         fixture.FulfillmentRepository.Entities[0].Status.Should().Be(OmniFulfillmentStatus.Accepted);
         fixture.InboxRepository.Entities.Should().ContainSingle();
         fixture.InboxRepository.Entities[0].Status.Should().Be(OmniInboxMessageStatus.Processed);
@@ -110,6 +111,7 @@ public class OmnichannelCallbackFulfillmentTests
             Source = "worker",
             Payload = new FulfillmentStatusChangedPayload
             {
+                OrderId = 42,
                 OrderGuid = orderGuid,
                 ExternalRequestId = "wms-req-1",
                 Status = status

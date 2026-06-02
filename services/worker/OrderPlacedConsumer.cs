@@ -94,6 +94,16 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
+            // If circuit breaker is open (status=pending), requeue the message instead of ACKing
+            if (fulfillment.Status == "pending")
+            {
+                _logger.LogInformation(
+                    "Circuit breaker open, requeuing message order_guid={OrderGuid} message_id={MessageId}",
+                    message.Payload.OrderGuid, message.MessageId);
+                await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true);
+                return;
+            }
+
             await PostFulfillmentCallbackAsync(message, fulfillment, CancellationToken.None);
 
             await channel.BasicAckAsync(args.DeliveryTag, multiple: false);

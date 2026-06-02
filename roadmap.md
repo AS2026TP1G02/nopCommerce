@@ -4,12 +4,12 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
 
 | #   | Title                                  | Maps to                              | Status     |
 |-----|----------------------------------------|--------------------------------------|------------|
-| 0   | Architecture Checkpoint                | Part 1 (Wave 1 + Wave 2)             | In review  |
-| 1   | Plugin scaffolding + tables            | Migration Stage 1                    | In review  |
-| 2   | RabbitMQ + worker + normal flow        | Migration Stage 2 (Iter. 1 happy)    | In review  |
+| 0   | Architecture Checkpoint                | Part 1 (Wave 1 + Wave 2)             | Done       |
+| 1   | Plugin scaffolding + tables            | Migration Stage 1                    | Done       |
+| 2   | RabbitMQ + worker + normal flow        | Migration Stage 2 (Iter. 1 happy)    | Done       |
 | 3   | Resilience under pressure              | Migration Stage 3 (Iter. 1 pressure) | In progress|
-| 4   | Consistency: idempotent inbox + POS    | Migration Stage 4 (Iter. 2)          | In review  |
-| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | In progress|
+| 4   | Consistency: idempotent inbox + POS    | Migration Stage 4 (Iter. 2)          | Done       |
+| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | In review  |
 | 6   | Evidence pack + demo + presentation    | Part 2 final delivery                | In progress|
 
 ---
@@ -37,7 +37,7 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] Empty admin views for outbox/projection (shells only).
   - [x] Plugin installs cleanly into a fresh nopCommerce DB.
 - **Verification gate**: plugin builds; install/uninstall round-trip leaves DB clean; tables visible with correct columns.
-- **Current evidence**: see [Phase 1 plugin scaffold evidence](docs/evidence/phase-1-plugin-scaffold.md). Code builds through Docker; install, table visibility and admin page visibility were confirmed locally. Uninstall DB validation is still required before marking the phase done.
+- **Current evidence**: see [Phase 1 plugin scaffold evidence](docs/evidence/phase-1-plugin-scaffold.md). Build + install + table/admin visibility confirmed locally, and the **uninstall round-trip was proven on 2026-06-02** (uninstall drops all four tables + index → DB clean; reinstall recreates them and a fresh order flows end-to-end). Gate passed.
 - **Risks**: nopCommerce migration tooling not behaving on the active branch; .NET 10 SDK availability in the dev environment.
 
 ## Phase 2 — RabbitMQ + worker + normal flow (Iteration 1 happy path)
@@ -50,7 +50,7 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] WMS simulator with `normal` mode only; POS simulator stub.
   - [x] Docker Compose runs nopCommerce + SQL Server + RabbitMQ + worker + WMS sim + POS sim in one command.
 - **Verification gate**: place an order through the storefront → fulfillment row exists in plugin with state `accepted`; checkout latency unchanged from baseline; no synchronous external HTTP on the checkout thread.
-- **Current status (2026-06-02)**: all code merged to `develop` — PR #10 (outbox + real RabbitMQ publish + fulfillment callback) and PR #11 (Compose/evidence). Branch-level E2E smoke observed. **Pending before Done**: re-run the E2E gate on merged `develop` and capture the checkout-latency + no-sync-HTTP evidence (QA-5).
+- **Current status (2026-06-02)**: all code merged to `develop` (PR #10 outbox + RabbitMQ publish + fulfillment callback; PR #11 Compose/evidence). E2E gate re-run on merged `develop` → order → `OmniOrderFulfillment` Accepted; QA-5 captured (outbox write avg 10.3 ms; 0 sync HTTP; WMS-slow + same-machine A/B confirm checkout latency unchanged vs no-plugin). **Gate passed.**
 - **Risks**: scheduled-task lag larger than expected; RabbitMQ publisher confirm semantics misconfigured.
 
 ## Phase 3 — Resilience under pressure (Iteration 1 pressure work)
@@ -76,7 +76,7 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] Unit tests for `messageId` deduplication and `sourceVersion` staleness.
   - [x] Demo script: duplicate POS event → ignored; stale POS event → ignored; legitimate update → applied.
 - **Verification gate**: QA-2 measures hit (duplicate detected ≤ 50 ms; 0 duplicate fulfillment rows; older `sourceVersion` ignored). Go/no-go: **Go** on idempotent inbox; **Partial-go** on projection-only stock (write-through deferred).
-- **Current evidence**: see [QA-2 POS consistency](docs/evidence/qa-2-consistency.md) and [QA-3 plugin-side traceability](docs/evidence/qa-3-traceability.md). Code + unit tests merged to `develop` (6 test files incl. `messageId` dedup + `sourceVersion` staleness). **Pending before Done**: finalize the QA-2 runtime numbers (duplicate-rejection timing, 0 duplicate rows, stale ignored) on the merged stack.
+- **Current evidence**: see [QA-2 POS consistency](docs/evidence/qa-2-consistency.md) and [QA-3 traceability](docs/evidence/qa-3-traceability.md). Code + unit tests merged to `develop` (6 test files incl. `messageId` dedup + `sourceVersion` staleness). Runtime measurements captured: duplicate rejected in `17.485 ms`, duplicate inbox count is `1`, POS created `0` fulfillment rows, and stale `sourceVersion` was ignored.
 - **Risks**: `sourceVersion` clock semantics broken by POS sim's clock model; inbox table growth not capped (acceptable for demo).
 
 ## Phase 5 — Traceability: correlation + admin (Iteration 3)
@@ -84,22 +84,22 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
 - **Goal**: make a delayed/recovering order self-explanatory from the admin view.
 - **Deliverables**:
   - [x] Standard envelope (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) on every message; producer/consumer enforce.
-  - [x] `OrderGuid` + `messageId` + `externalRequestId` on log lines and DB rows in the integration path.
-  - [x] Plugin admin view (`Trace.cshtml`): enter `OrderGuid` → see outbox row, MQ message ID, worker-attempt pointer, fulfillment state.
+  - [x] `OrderGuid` + `messageId` + `externalRequestId` on DB rows and integration logs in the order path.
+  - [x] Plugin admin view: enter `OrderGuid` → see outbox row, MQ message ID, fulfillment state, and worker-attempt lookup guidance.
   - [x] Worker logs structured with same IDs.
 - **Verification gate**: QA-3 + QA-4 measures hit (100% of orders link end-to-end; resolution path ≤ 3 admin clicks; queue/retry/DLQ visible in single dashboard view). Go/no-go: **Go** on correlation propagation.
-- **Current status (2026-06-02)**: Trace view + 3-ID propagation + worker/plugin structured logs merged to `develop`; RabbitMQ Management UI exposed in Compose. **Pending before Done**: the QA-3 10-order end-to-end link run (today `qa-3` covers the plugin/POS receive side only) and the QA-4 operability capture (`qa-4-operability.md` still a template).
+- **Current evidence**: see [QA-3 order-to-fulfillment traceability](docs/evidence/qa-3-traceability.md). QA-3 is complete with 10/10 traceable orders and a ≤ 3-click admin path; RabbitMQ Management UI is exposed in Compose and the plugin admin now surfaces a fulfillment-pending count. **Pending before Done**: the QA-4 operability runtime capture in [QA-4 operability](docs/evidence/qa-4-operability.md).
 - **Risks**: admin view scope creep; structured-logging discipline drifts late in the project.
 
 ## Phase 6 — Evidence pack + demo + presentation
 
 - **Goal**: produce the Part 2 final deliverable — a runnable demo, an evidence pack, an updated architecture report, and the live presentation.
 - **Deliverables**:
-  - [ ] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps. *(baseline done; QA-1 / QA-4 / QA-5 still templates; QA-2 / QA-3 partial.)*
+  - [~] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps. *(baseline + QA-2 + QA-3 + QA-5 captured; QA-1 pressure + QA-4 operability runtime still pending.)*
   - [x] Updated `docs/architecture-report.md` (short, focused — scenario, drivers, ADD application, target arch, evolution path, limits).
   - [x] Updated ADRs reflecting Part 2 reality vs Part 1 plan (ADR-0007 projection-first / Part-2 outcome; ADR-0009 frozen envelope).
   - [ ] Live demo script: 5 scenarios (normal flow, WMS down, recovery, POS update, duplicate/stale).
-  - [ ] Final presentation slides (`docs/part2/`) + 5-min technical defence prep. *(in progress)*
+  - [ ] Final presentation slides (`docs/part2/`) + 5-min technical defence prep. *(slides drafted in `docs/part2/`; defence prep pending)*
 - **Verification gate**: every demo scenario runs from `docker compose up` with no manual fix-ups; every QA scenario measure has a number in the evidence pack; team can answer rejected-alternative questions on every ADR within 30 s.
 - **Risks**: Docker Compose drift between dev machines; running out of time on evidence collection vs implementation polish.
 

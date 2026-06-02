@@ -74,6 +74,15 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Tradeoff/risk introduced**: none. Note: a true clean-slate `make clean` additionally wipes the DB + App_Data (no auto-install), so a fresh-clone bring-up needs the documented install steps — deferred to a pre-demo step.
 **Verification**: all six containers reached `healthy` after `down`+`up`; storefront HTTP 200; plugin `Misc.OmnichannelCore` still installed; 110 fulfillment rows preserved. Local only.
 
+## 2026-06-02 — Complete QA-2 / QA-3 runtime evidence
+
+**Phase**: 4 + 5.
+**Driver**: QA-2 consistency and QA-3 traceability.
+**Files**: `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md`, `journal.md`.
+**Change**: Replaced the remaining pending QA-2 note with measured POS normal/duplicate/stale evidence and SQL checks. Expanded QA-3 from POS-side traceability to full order-to-fulfillment traceability with 10 placed orders, admin Trace click path, RabbitMQ state, and the worker-log caveat by `message_id`.
+**Tradeoff/risk introduced**: Worker delivery attempts are still not persisted in the plugin admin view; evidence documents the operational workaround through worker logs filtered by `message_id`.
+**Verification**: Live Compose stack on 2026-06-02: POS duplicate direct callback rejected in `17.485 ms`; duplicate `messageId` created one inbox row; POS scenario created `0` fulfillment rows; stale source version `44` did not overwrite stored version `45`; k6 placed `10/10` orders with `100%` success; SQL trace count returned `10`; RabbitMQ order queue and DLQ both ended at `0` messages.
+
 ## 2026-06-02 — Align plugin↔worker envelope contract + close out roldão's Phase-2/5/6 deliverables
 
 **Phase**: 2 + 5 + 6 (integration boundary + traceability + ADRs).

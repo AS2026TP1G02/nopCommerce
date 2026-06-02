@@ -4,9 +4,15 @@ Per-dev, per-date plan for delivering Part 2 of *Architectural Evolution of nopC
 
 If `plan.md` and `roadmap.md` ever conflict, `roadmap.md` is authoritative for *what* must be delivered; this file is authoritative for *who* delivers it *when*.
 
+> **Status — 2026-06-02 (final build day; demo 2026-06-03).** Both integration PRs are merged to `develop`: **#10** (outbox + real RabbitMQ publish + fulfillment callback + `Trace.cshtml`) and **#11** (Compose + `setup.md` + evidence scaffolding). **Phases 1–5 are code-complete on `develop`.** What remains today is *runtime evidence + polish*, not new features:
+> - **QA-1** (pressure), **QA-4** (operability), **QA-5** (outbox latency) — numbers not yet captured (templates).
+> - **QA-2** runtime numbers to finalize; **QA-3** to extend from the POS receive side to the full 10-order order→fulfillment link.
+> - **Phase-1 uninstall DB gate** still unproven.
+> - **Slides** (`docs/part2/`), full **5-scenario dry-run ×2**, and a fresh-clone `docker compose up` smoke.
+
 ## Calendar
 
-- **Today**: 2026-05-14 (Thursday).
+- **Today**: 2026-06-02 (Tuesday) — final build day. *(Plan originally authored 2026-05-14.)*
 - **Soft freeze**: 2026-05-31 (Sunday). All scope below must be complete on this date.
 - **Buffer + rehearsal**: 2026-06-01 (Mon), 2026-06-02 (Tue). Small fixes and evidence tweaks allowed; no new features.
 - **Final presentation**: 2026-06-03 (Wednesday).
@@ -94,7 +100,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
 | Diogu | `[x]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
 | Diogu | `[x]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
-| Diogu | `[ ]` `docs/setup.md` skeleton with section headers + Phase markers | `docs/setup.md` |
+| Diogu | `[x]` `docs/setup.md` skeleton with section headers + Phase markers (now a full 207-line build/run guide) | `docs/setup.md` |
 | Diogu | `[x]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
 
 **Verification gate** (Sun 17 May)
@@ -128,7 +134,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
-| Diogu | `[ ]` Docker Compose stitches every service/container; true E2E remains pending plugin RabbitMQ publish + fulfillment callback | `docker-compose.yml`, `docs/setup.md` |
+| Diogu | `[x]` Docker Compose stitches every service/container end-to-end (plugin publish + fulfillment callback now merged); **E2E run to be re-verified on merged `develop`** | `docker-compose.yml`, `docs/setup.md` |
 | Diogu | `[x]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
 | João Roldão + António | `[x]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` (envelope frozen + documented in ADR-0009) |
 
@@ -156,11 +162,11 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | Diogu | `[x]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
-| António | `[ ]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/` |
+| António | `[x]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/WmsResiliencePipeline.cs` |
 | António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
 | António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
-| Diogu | `[~]` Pressure-test harness documented; runtime P95/recovery measurement pending Phase 2 plugin publish + callback completion | `docs/evidence/qa-1-pressure.md` |
+| Diogu | `[~]` Pressure-test harness documented; **plugin publish + callback now merged — QA-1 runtime P95/drain/pending numbers still to be captured on the merged stack** | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
 

@@ -170,7 +170,7 @@ export function validateCheckoutStepResponse(response, stepName) {
             }
 
             return true;
-        } catch {
+        } catch (e) {
             return response.status === 200;
         }
     }

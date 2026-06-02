@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Events;
 using Nop.Data;
@@ -50,11 +51,16 @@ public class OrderPlacedOutboxConsumer : IConsumer<OrderPlacedEvent>
     /// <returns>A task that represents the asynchronous operation</returns>
     public async Task HandleEventAsync(OrderPlacedEvent eventMessage)
     {
+        // QA-5: time from OrderPlacedEvent to durable outbox row written (target ≤ 100 ms).
+        var stopwatch = Stopwatch.StartNew();
+
         var message = await _outboxMessageFactory.BuildOrderPlacedMessageAsync(eventMessage.Order);
         await _outboxMessageRepository.InsertAsync(message);
 
+        stopwatch.Stop();
+
         await _logger.InformationAsync(
-            $"OmnichannelCore outbox queued order_guid={message.OrderGuid} message_id={message.MessageId} order_id={message.OrderId}");
+            $"OmnichannelCore outbox queued order_guid={message.OrderGuid} message_id={message.MessageId} order_id={message.OrderId} elapsed_ms={stopwatch.ElapsedMilliseconds}");
     }
 
     #endregion

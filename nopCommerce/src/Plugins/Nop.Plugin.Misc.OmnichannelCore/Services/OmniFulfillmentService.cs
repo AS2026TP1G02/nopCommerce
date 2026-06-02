@@ -76,7 +76,8 @@ public class OmniFulfillmentService
             return fulfillment;
         }
 
-        fulfillment.OrderId = payload.OrderId;
+if (payload.OrderId > 0)
+    fulfillment.OrderId = payload.OrderId;
         fulfillment.MessageId = request.MessageId;
         fulfillment.CorrelationId = request.CorrelationId;
         fulfillment.ExternalRequestId = payload.ExternalRequestId;

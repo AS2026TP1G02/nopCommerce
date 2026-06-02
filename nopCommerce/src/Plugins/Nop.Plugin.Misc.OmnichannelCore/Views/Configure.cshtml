@@ -12,13 +12,14 @@
 <div class="cards-group">
     <div class="card card-default">
         <div class="card-header">
-            Phase 1 foundation
+            Projection state (live)
         </div>
         <div class="card-body">
             <p>
-                The plugin is installed as the nopCommerce extension point for the omnichannel evolution.
-                This phase only creates the durable data model and an admin shell. Messaging, workers,
-                WMS/POS simulators and retry logic are intentionally deferred to later roadmap phases.
+                The plugin is the nopCommerce extension point for the omnichannel evolution. It owns the
+                outbox/inbox ledgers and the fulfillment and stock-sync projections. Order events publish
+                asynchronously to the worker over RabbitMQ and fulfillment status is projected back here,
+                off the checkout thread. The counts below are the live projection state.
             </p>
 
             <table class="table table-hover">
@@ -44,6 +45,11 @@
                         <td>OmniOrderFulfillment</td>
                         <td>Order fulfillment projection owned by the plugin.</td>
                         <td class="text-right">@Model.FulfillmentRecords</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;&nbsp;&#8627; pending / degraded</td>
+                        <td>Fulfillment rows still awaiting or degraded — operability signal (QA-4).</td>
+                        <td class="text-right">@Model.PendingFulfillmentRecords</td>
                     </tr>
                     <tr>
                         <td>OmniStockSyncState</td>

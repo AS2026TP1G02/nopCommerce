@@ -70,5 +70,55 @@ public class OmnichannelCoreService
         return await _stockSyncStateRepository.Table.CountAsync();
     }
 
+    /// <summary>
+    /// Gets the count of fulfillment rows still Pending or Degraded (QA-4 operability:
+    /// the "fulfillment-pending count" surfaced in the admin alongside the RabbitMQ dashboard)
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task<int> GetPendingFulfillmentCountAsync()
+    {
+        return await _orderFulfillmentRepository.Table
+            .Where(fulfillment => fulfillment.StatusId == (int)OmniFulfillmentStatus.Pending
+                || fulfillment.StatusId == (int)OmniFulfillmentStatus.Degraded)
+            .CountAsync();
+    }
+
+    /// <summary>
+    /// Gets the outbox messages written for an order (QA-3 trace lookup)
+    /// </summary>
+    /// <param name="orderGuid">Order GUID</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task<IList<OmniOutboxMessage>> GetOutboxMessagesByOrderGuidAsync(Guid orderGuid)
+    {
+        return await _outboxMessageRepository.Table
+            .Where(message => message.OrderGuid == orderGuid)
+            .OrderBy(message => message.Id)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets the inbox messages received for an order (QA-3 trace lookup)
+    /// </summary>
+    /// <param name="orderGuid">Order GUID</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task<IList<OmniInboxMessage>> GetInboxMessagesByOrderGuidAsync(Guid orderGuid)
+    {
+        return await _inboxMessageRepository.Table
+            .Where(message => message.OrderGuid == orderGuid)
+            .OrderBy(message => message.Id)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets the fulfillment projection row for an order, if any (QA-3 trace lookup)
+    /// </summary>
+    /// <param name="orderGuid">Order GUID</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task<OmniOrderFulfillment> GetFulfillmentByOrderGuidAsync(Guid orderGuid)
+    {
+        return await _orderFulfillmentRepository.Table
+            .FirstOrDefaultAsync(fulfillment => fulfillment.OrderGuid == orderGuid);
+    }
+
     #endregion
 }

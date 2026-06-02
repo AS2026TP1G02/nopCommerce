@@ -3,11 +3,13 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Moq;
 using Nop.Plugin.Misc.OmnichannelCore;
 using Nop.Plugin.Misc.OmnichannelCore.Controllers;
 using Nop.Plugin.Misc.OmnichannelCore.Domains;
 using Nop.Plugin.Misc.OmnichannelCore.Models.Callbacks;
 using Nop.Plugin.Misc.OmnichannelCore.Services;
+using Nop.Services.Logging;
 using NUnit.Framework;
 
 namespace Nop.Tests.Nop.Plugin.Misc.OmnichannelCore.Tests;
@@ -97,7 +99,11 @@ public class OmnichannelCallbackControllerTests
     {
         var inboxRepository = new InMemoryRepository<OmniInboxMessage>();
         var stockRepository = new InMemoryRepository<OmniStockSyncState>();
+        var fulfillmentRepository = new InMemoryRepository<OmniOrderFulfillment>();
+        var logger = new Mock<ILogger>();
+        logger.SetReturnsDefault<Task>(Task.CompletedTask);
         var controller = new OmnichannelCallbackController(CreateConfiguration(),
+            new OmniFulfillmentService(fulfillmentRepository, logger.Object),
             new OmniInboxService(inboxRepository),
             new OmniStockSyncService(stockRepository))
         {

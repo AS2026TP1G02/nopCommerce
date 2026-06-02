@@ -4,9 +4,15 @@ Per-dev, per-date plan for delivering Part 2 of *Architectural Evolution of nopC
 
 If `plan.md` and `roadmap.md` ever conflict, `roadmap.md` is authoritative for *what* must be delivered; this file is authoritative for *who* delivers it *when*.
 
+> **Status — 2026-06-02 (final build day; demo 2026-06-03).** Both integration PRs are merged to `develop`: **#10** (outbox + real RabbitMQ publish + fulfillment callback + `Trace.cshtml`) and **#11** (Compose + `setup.md` + evidence scaffolding). **Phases 1–5 are code-complete on `develop`.** What remains today is *runtime evidence + polish*, not new features:
+> - **QA-1** (pressure), **QA-4** (operability), **QA-5** (outbox latency) — numbers not yet captured (templates).
+> - **QA-2** runtime numbers to finalize; **QA-3** to extend from the POS receive side to the full 10-order order→fulfillment link.
+> - **Phase-1 uninstall DB gate** still unproven.
+> - **Slides** (`docs/part2/`), full **5-scenario dry-run ×2**, and a fresh-clone `docker compose up` smoke.
+
 ## Calendar
 
-- **Today**: 2026-05-14 (Thursday).
+- **Today**: 2026-06-02 (Tuesday) — final build day. *(Plan originally authored 2026-05-14.)*
 - **Soft freeze**: 2026-05-31 (Sunday). All scope below must be complete on this date.
 - **Buffer + rehearsal**: 2026-06-01 (Mon), 2026-06-02 (Tue). Small fixes and evidence tweaks allowed; no new features.
 - **Final presentation**: 2026-06-03 (Wednesday).
@@ -86,16 +92,16 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | João Roldão | `[x]` Plugin scaffold (copy `nopCommerce/src/Plugins/Nop.Plugin.Misc.Omnisend/` structure), `plugin.json`, lifecycle, `Install/Uninstall` | `nopCommerce/src/Plugins/Nop.Plugin.Misc.OmnichannelCore/` |
 | João Roldão | `[x]` Migrations for `OmniOutboxMessage`, `OmniInboxMessage`, `OmniOrderFulfillment`, `OmniStockSyncState` | `.../OmnichannelCore/Migrations/` |
-| João Roldão | `[ ]` Write [ADR-0011](docs/adr/0011-order-outbox-insertion-strategy.md) (consumer + reconciler strategy) | `docs/adr/0011-order-outbox-insertion-strategy.md` |
-| João Roldão | `[ ]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
+| João Roldão | `[x]` Write [ADR-0011](docs/adr/0011-order-outbox-insertion-strategy.md) (consumer + reconciler strategy) | `docs/adr/0011-order-outbox-insertion-strategy.md` |
+| João Roldão | `[x]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
 | João Varela | `[x]` Admin view shells (empty MVC controller + view skeleton) | `.../OmnichannelCore/Controllers/`, `.../Views/` |
 | João Varela | `[x]` POS simulator scaffold (HTTP server, mode placeholder) | `services/pos-sim/` (new) |
 | António | `[x]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
 | António | `[x]` RabbitMQ topology design (queues, bindings, DLX) documented | `services/worker/README.md` |
 | Diogu | `[x]` WMS simulator scaffold (HTTP server, mode placeholder) | `services/wms-sim/` (new) |
 | Diogu | `[x]` Docker Compose v1: services start, healthchecks pass, no logic yet | `docker-compose.yml` (project root, new) |
-| Diogu | `[ ]` `docs/setup.md` skeleton with section headers + Phase markers | `docs/setup.md` |
-| Diogu | `[ ]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
+| Diogu | `[x]` `docs/setup.md` skeleton with section headers + Phase markers (now a full 207-line build/run guide) | `docs/setup.md` |
+| Diogu | `[x]` **Baseline measurement**: place 50 orders against vanilla nopCommerce, capture P50/P95 checkout latency | `docs/evidence/baseline.md` |
 
 **Verification gate** (Sun 17 May)
 
@@ -120,17 +126,17 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Roldão | `[ ]` `OrderPlacedEvent` consumer writes outbox row | `.../OmnichannelCore/Infrastructure/EventConsumer.cs` |
-| João Roldão | `[ ]` Scheduled outbox publisher (publisher confirms on) | `.../OmnichannelCore/ScheduleTasks/OutboxPublisherTask.cs` |
-| João Roldão | `[ ]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
-| João Roldão | `[ ]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
-| João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
+| João Roldão | `[x]` `OrderPlacedEvent` consumer writes outbox row | `.../OmnichannelCore/Services/OrderPlacedOutboxConsumer.cs` |
+| João Roldão | `[x]` Scheduled outbox publisher (publisher confirms on) | `.../OmnichannelCore/ScheduleTasks/OutboxPublisherTask.cs` |
+| João Roldão | `[x]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
+| João Roldão | `[x]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
+| João Varela | `[x]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
-| Diogu | `[ ]` Docker Compose stitches everything end-to-end | `docker-compose.yml` |
-| Diogu | `[ ]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
-| João Roldão + António | `[ ]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` |
+| Diogu | `[x]` Docker Compose stitches every service/container end-to-end (plugin publish + fulfillment callback now merged); **E2E run to be re-verified on merged `develop`** | `docker-compose.yml`, `docs/setup.md` |
+| Diogu | `[x]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
+| João Roldão + António | `[x]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` (envelope frozen + documented in ADR-0009) |
 
 **Verification gate** (Sun 24 May)
 
@@ -156,11 +162,11 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | Diogu | `[x]` WMS sim `slow`, `unavailable`, `contradictory` modes + admin toggle endpoint | `services/wms-sim/` |
-| António | `[ ]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/` |
+| António | `[x]` Polly retry with exponential backoff on worker → WMS HTTP | `services/worker/Resilience/WmsResiliencePipeline.cs` |
 | António | `[x]` Polly circuit breaker; trip → mark fulfillment `pending/degraded` | `services/worker/Resilience/` |
 | António | `[x]` Dead-letter queue + handler for poison messages | `services/worker/` |
 | António | `[x]` Backlog drain on circuit-breaker close | `services/worker/` |
-| Diogu | `[ ]` Pressure-test harness: toggle WMS to `unavailable` for 30 s, capture P95 + recovery time + orders-pending count | `docs/evidence/qa-1-pressure.md` |
+| Diogu | `[~]` Pressure-test harness documented; **plugin publish + callback now merged — QA-1 runtime P95/drain/pending numbers still to be captured on the merged stack** | `docs/evidence/qa-1-pressure.md` |
 
 **Verification gate** (Wed 27 May)
 
@@ -193,6 +199,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 **Verification gate** (Wed 27 May)
 
 - **QA-2**: duplicate `messageId` rejected ≤ 50 ms; 0 duplicate fulfillment rows; older `sourceVersion` ignored.
+- **Current result (2026-06-02)**: complete. Duplicate callback rejected in `17.485 ms`; duplicate `messageId` count is `1`; POS scenario created `0` fulfillment rows before order-flow evidence; stale version `44` did not overwrite stored version `45`. See [QA-2 evidence](docs/evidence/qa-2-consistency.md).
 - Go decision on Iteration 2 logged in `docs/part1/architecture-checkpoint.md` §6 (and partial-go on projection-only stock per ADR-0007).
 
 **Risks**
@@ -209,15 +216,16 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Roldão | `[ ]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Admin/`, `.../OmnichannelCore/Controllers/OmnichannelAdminController.cs` |
-| João Varela | `[ ]` Plugin-side structured logs carrying `OrderGuid` + `messageId` + `externalRequestId` | `.../OmnichannelCore/` (cross-cutting) |
+| João Roldão | `[x]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Trace.cshtml`, `.../OmnichannelCore/Controllers/OmnichannelCoreController.cs` (`Trace` action; worker attempts via MessageId → RabbitMQ UI / worker logs) |
+| João Varela | `[x]` Plugin-side log fields cross-checked with worker/WMS fields (`order_guid`, `message_id`, `external_request_id`) | `.../OmnichannelCore/`, `services/worker/`, `services/wms-sim/`; evidence in `docs/evidence/qa-3-traceability.md` |
 | António | `[x]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
-| Diogu | `[ ]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough | `docker-compose.yml`, `docs/setup.md` |
-| João Roldão + António | `[ ]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
+| Diogu | `[x]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough and infrastructure smoke captured | `docker-compose.yml`, `docs/setup.md`, `docs/evidence/qa-4-operability.md` |
+| João Roldão + António | `[x]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
 
 **Verification gate** (Fri 29 May)
 
 - **QA-3**: pick 10 placed orders; for each, the outbox row, MQ message id, worker attempt log, and fulfillment projection are linkable by `OrderGuid` and `messageId`. Resolution path ≤ 3 admin clicks. Record in `docs/evidence/qa-3-traceability.md`.
+- **Current QA-3 result (2026-06-02)**: complete. Ten placed orders are linked order → outbox → worker/WMS → fulfillment; `TraceableOrderCount = 10`; admin Trace path is ≤ 3 clicks. Worker attempts are resolved by filtering worker logs on `message_id`.
 - **QA-4**: RabbitMQ Management UI + plugin admin view together expose queue depth, retry count, DLQ size, fulfillment-pending count. Refresh latency ≤ 5 s. Record in `docs/evidence/qa-4-operability.md`.
 
 **Risks**
@@ -234,9 +242,9 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Varela | `[ ]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
-| Diogu | `[ ]` Evidence pack: QA-1 + QA-4 + baseline (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
-| João Roldão | `[ ]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` |
+| João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
+| Diogu | `[~]` Evidence pack: baseline + QA-4 infrastructure captured; QA-1 runtime numbers pending plugin E2E unblock | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
+| João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
 | Diogu | `[ ]` Demo + measurement slides; final Compose smoke from a fresh clone | (slides repo), `docker-compose.yml` |
@@ -294,8 +302,8 @@ Tick every line before declaring the plan complete.
 - [ ] `docker compose up` from a fresh clone reaches healthy state without manual steps.
 - [ ] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
 - [ ] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
-- [ ] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
-- [ ] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
+- [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
+- [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
 - [ ] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.
 - [ ] **QA-5**: outbox row written ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP calls in checkout trace.
 - [ ] All five demo scenarios runnable from `docker compose up` (normal, WMS unavailable + recovery, POS legitimate, POS duplicate, POS stale).

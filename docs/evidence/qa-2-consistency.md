@@ -13,6 +13,7 @@ The plugin must handle at-least-once delivery safely:
 
 - duplicate `messageId` is detected by `OmniInboxMessage`;
 - stale `sourceVersion` is ignored by `OmniStockSyncState`;
+- POS stock events do not create fulfillment rows;
 - core nopCommerce stock is not overwritten in this iteration, per ADR-0007 projection-first stock.
 
 ## Implemented Controls
@@ -25,141 +26,179 @@ The plugin must handle at-least-once delivery safely:
 | Stale handling | `OmniStockSyncService` ignores updates where `sourceVersion <= stored SourceVersion`. |
 | POS simulator | `services/pos-sim` supports `normal`, `duplicate`, and `stale` modes. |
 
-## Run
+## Runtime Evidence
 
-Build and start nopCommerce first. Then build the simulator from the repository root:
-
-```bash
-docker build -t omni-pos-sim services/pos-sim
-```
-
-Run it against a nopCommerce instance exposed on the host:
+Captured on `2026-06-02` on branch `develop` with the Compose stack:
 
 ```bash
-docker run --rm -p 5081:8080 \
-  --add-host=host.docker.internal:host-gateway \
-  -e NopCommerce__BaseUrl=http://host.docker.internal \
-  -e OmnichannelCore__DemoToken=omni-demo-token \
-  omni-pos-sim
+docker compose up -d --build
 ```
+
+Services used:
+
+- nopCommerce: `http://localhost:8080`
+- POS simulator: `http://localhost:8082`
+- SQL Server: `localhost:1433`, database `nopCommerce`
 
 ## Normal Update
 
+Command:
+
 ```bash
-curl -X POST http://localhost:5081/emit \
-  -H "Content-Type: application/json" \
+curl -sS -w '\nTIME_TOTAL=%{time_total}\n' \
+  -X POST http://localhost:8082/emit \
+  -H 'Content-Type: application/json' \
   -d '{"mode":"normal","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":3}'
 ```
 
-Expected plugin result inside simulator response:
+Observed result:
 
-```json
-{
-  "result": "applied",
-  "applied": true,
-  "duplicate": false,
-  "stale": false
-}
-```
+| Field | Value |
+|-------|-------|
+| `messageId` | `b9d279b8-d08b-471f-be75-0dbc04c56a7b` |
+| `sourceVersion` | `41` |
+| `quantityOnHand` | `3` |
+| plugin result | `applied` |
+| HTTP status | `200` |
+| POS round trip | `269.237 ms` |
 
-Expected SQL:
-
-```sql
-SELECT TOP (20) *
-FROM [dbo].[OmniInboxMessage]
-ORDER BY [Id] DESC;
-
-SELECT TOP (20) *
-FROM [dbo].[OmniStockSyncState]
-WHERE [ProductId] = 15 AND [WarehouseId] = 2
-ORDER BY [Id] DESC;
-```
+Meaning: a valid POS update is accepted, recorded in `OmniInboxMessage`, and applied to the stock projection.
 
 ## Duplicate Update
 
+Command:
+
 ```bash
-curl -X POST http://localhost:5081/emit \
-  -H "Content-Type: application/json" \
+curl -sS -w '\nTIME_TOTAL=%{time_total}\n' \
+  -X POST http://localhost:8082/emit \
+  -H 'Content-Type: application/json' \
   -d '{"mode":"duplicate","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":4}'
 ```
 
-Expected simulator result:
+Observed result:
 
-- first post returns `result = applied`;
-- second post returns `result = duplicate`;
-- both posts use the same `messageId`.
+| Call | Field | Value |
+|------|-------|-------|
+| first | `messageId` | `0159d12e-2607-4dcc-b695-64a6a0d71595` |
+| first | plugin result | `applied` |
+| first | `InboxId` | `2` |
+| second | `messageId` | `0159d12e-2607-4dcc-b695-64a6a0d71595` |
+| second | plugin result | `duplicate` |
+| second | `InboxId` | `2` |
+| second | `Duplicate` | `true` |
 
-Expected SQL:
+The simulator round trip for both posts was `55.449 ms`. To measure the duplicate rejection itself, the same callback payload was posted directly to the plugin twice.
+
+Direct duplicate timing:
+
+```bash
+curl -sS -w '\nTIME_TOTAL=%{time_total}\n' \
+  -X POST http://localhost:8080/omnichannel/callbacks/pos/stock-changed \
+  -H 'Content-Type: application/json' \
+  -H 'X-Demo-Token: omni-demo-token' \
+  -d '<same payload as first request>'
+```
+
+Observed direct duplicate result:
+
+| Field | Value |
+|-------|-------|
+| `messageId` | `851de464-832c-48f9-b0d1-ae4f892ae2cf` |
+| plugin result | `duplicate` |
+| `InboxId` | `5` |
+| `Duplicate` | `true` |
+| direct callback duration | `17.485 ms` |
+
+Acceptance result: duplicate rejected in `17.485 ms`, which is below the `<= 50 ms` QA-2 target.
+
+SQL evidence:
 
 ```sql
-DECLARE @MessageId UNIQUEIDENTIFIER = '<duplicate-message-id-from-response>';
+SELECT COUNT(*) AS FulfillmentRowsAfterPos
+FROM dbo.OmniOrderFulfillment;
 
-SELECT COUNT(*) AS InboxRowsForMessage
-FROM [dbo].[OmniInboxMessage]
-WHERE [MessageId] = @MessageId;
+SELECT MessageId, COUNT(*) AS InboxRowsForDuplicate
+FROM dbo.OmniInboxMessage
+WHERE MessageId = '0159d12e-2607-4dcc-b695-64a6a0d71595'
+GROUP BY MessageId;
+
+SELECT MessageId, COUNT(*) AS InboxRowsForDirectDuplicate
+FROM dbo.OmniInboxMessage
+WHERE MessageId = '851de464-832c-48f9-b0d1-ae4f892ae2cf'
+GROUP BY MessageId;
 ```
 
-Expected value:
+Observed SQL result:
 
-```text
-InboxRowsForMessage = 1
-```
+| Check | Result |
+|-------|--------|
+| fulfillment rows created by POS scenario | `0` |
+| inbox rows for duplicate simulator `messageId` | `1` |
+| inbox rows for direct duplicate `messageId` | `1` |
 
-This proves at-least-once delivery does not create duplicate processing rows. POS stock events do not create fulfillment rows, so `OmniOrderFulfillment` remains unchanged by this scenario.
+Meaning: at-least-once delivery can retry the same message, but the plugin processes it once.
 
 ## Stale Update
 
+Command:
+
 ```bash
-curl -X POST http://localhost:5081/emit \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"stale","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":5}'
+curl -sS -w '\nTIME_TOTAL=%{time_total}\n' \
+  -X POST http://localhost:8082/emit \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"stale","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":5,"sourceVersion":45}'
 ```
 
-Expected simulator result:
+Observed result:
 
-- first post returns `result = applied`;
-- second post returns `result = stale_ignored`;
-- second post has a lower `sourceVersion`.
+| Call | Field | Value |
+|------|-------|-------|
+| first | `messageId` | `aec353d1-00df-4f44-b155-9d3ee88e21e9` |
+| first | `sourceVersion` | `45` |
+| first | `quantityOnHand` | `5` |
+| first | plugin result | `applied` |
+| second | `messageId` | `bceec24e-609f-4ca5-ad25-ff32c52e2e10` |
+| second | `sourceVersion` | `44` |
+| second | `quantityOnHand` | `12` |
+| second | plugin result | `stale_ignored` |
+| POS round trip | both posts | `25.623 ms` |
 
-Expected SQL:
+SQL evidence:
 
 ```sql
 SELECT TOP (1)
-    [ProductId],
-    [WarehouseId],
-    [QuantityOnHand],
-    [SourceVersion],
-    [LastMessageId],
-    [StatusId],
-    [LastSeenOnUtc],
-    [UpdatedOnUtc]
-FROM [dbo].[OmniStockSyncState]
-WHERE [ProductId] = 15 AND [WarehouseId] = 2
-ORDER BY [Id] DESC;
+    ProductId,
+    WarehouseId,
+    QuantityOnHand,
+    SourceVersion,
+    LastMessageId,
+    StatusId
+FROM dbo.OmniStockSyncState
+WHERE ProductId = 15 AND WarehouseId = 2
+ORDER BY Id DESC;
 ```
 
-Expected result:
+Observed SQL result:
 
-- `SourceVersion` remains the newer version.
-- `QuantityOnHand` remains the value from the newer version.
-- `StatusId = 20`, meaning `OmniStockSyncStatus.StaleIgnored`.
-- `LastMessageId` points to the stale message for traceability.
+| Field | Value |
+|-------|-------|
+| `ProductId` | `15` |
+| `WarehouseId` | `2` |
+| `QuantityOnHand` | `5` |
+| `SourceVersion` | `45` |
+| `LastMessageId` | `BCEEC24E-609F-4CA5-AD25-FF32C52E2E10` |
+| `StatusId` | `20` |
 
-## Build/Smoke Status
+Meaning: the stale event was recorded for traceability, but it did not overwrite the newer `QuantityOnHand = 5` or `SourceVersion = 45`.
 
-Completed on 2026-05-15:
+## QA-2 Result
 
-- `docker build --target build -t nopcommerce-omni-inbox-pos-check .` from `nopCommerce/` succeeds with 3 existing nopCommerce warnings and 0 errors.
-- `docker build -t omni-pos-sim-check .` from `services/pos-sim/` succeeds with 0 warnings and 0 errors.
-- `docker run --rm -d -p 5081:8080 --name omni-pos-sim-smoke omni-pos-sim-check` starts the simulator.
-- `curl -sS http://localhost:5081/health` returns `{"status":"ok","simulator":"pos-sim","mode":"normal"}`.
+Current status: **complete**.
 
-## QA-2 Status
-
-Current status: **implemented, runtime measurement pending**.
-
-The runtime evidence to capture during demo rehearsal is:
-
-- duplicate callback duration, target `<= 50 ms`;
-- `COUNT(*) = 1` for duplicate `messageId` in `OmniInboxMessage`;
-- stale `sourceVersion` does not overwrite stored `QuantityOnHand` or `SourceVersion`.
+| Requirement | Evidence | Result |
+|-------------|----------|--------|
+| POS normal update applies | normal simulator mode returned `applied` | pass |
+| duplicate rejected `<= 50 ms` | direct duplicate callback took `17.485 ms` | pass |
+| duplicate does not create duplicate inbox rows | duplicate `messageId` count is `1` | pass |
+| POS does not create fulfillment rows | `OmniOrderFulfillment` count after POS scenario is `0` | pass |
+| stale `sourceVersion` ignored | stored state remains quantity `5`, version `45` after stale version `44` | pass |

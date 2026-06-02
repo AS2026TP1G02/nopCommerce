@@ -99,7 +99,7 @@ The decision pressure is therefore: **how does an order placed in nopCommerce re
 
 Adopt **Option C — durable outbox in the plugin + RabbitMQ to the worker**.
 
-The plugin writes `OmniOutboxMessage` in the same DB transaction as the nopCommerce order side effects. A scheduled publisher drains pending rows to RabbitMQ. The worker consumes, calls WMS, and posts back to the plugin via HTTP for projection updates.
+The plugin writes `OmniOutboxMessage` in the same DB transaction as the nopCommerce order side effects. A scheduled publisher drains pending rows to RabbitMQ. The worker consumes, calls WMS behind a Polly **retry (exponential backoff) + circuit breaker**, and posts back to the plugin via HTTP for projection updates; messages that exhaust retries are dead-lettered (DLQ) rather than blocking the queue.
 
 This option wins despite its operational cost because:
 
@@ -122,7 +122,7 @@ Reopen this decision if any of the following becomes true:
 ## Evidence to watch
 
 - **Outbox lag** (rows pending > N seconds) during normal and degraded runs in the demo.
-- **Worker retry / DLQ counts** during the induced WMS outage scenario.
+- **Worker retry attempts, circuit-breaker trips, and DLQ counts** during the induced WMS outage scenario.
 - **End-to-end time** from `OrderPlacedEvent` to `fulfillment.accepted` projection, under nominal and degraded WMS.
 - **Duplicated fulfillment side effects** observed — must remain 0; non-zero indicates ADR-0006 has regressed and this ADR's accepted-damage assumption no longer holds.
 

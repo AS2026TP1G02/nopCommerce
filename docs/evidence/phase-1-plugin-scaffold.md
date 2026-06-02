@@ -105,9 +105,9 @@ Manual runtime checks completed:
 - Admin page is visible at `http://localhost/Admin/OmnichannelCore/Configure`.
 - The four `Omni%` tables are visible from DBeaver in the nopCommerce database.
 
-Runtime checks still required:
+Runtime checks completed:
 
-- Uninstall the plugin and confirm the four tables are removed.
+- Uninstall round-trip confirmed (2026-06-02): uninstall drops all four `Omni%` tables + the index (DB clean); reinstall recreates them, and a post-reinstall order flows. See **Uninstall DB gate** below.
 
 ## Database Inspection with DBeaver
 
@@ -179,8 +179,65 @@ FROM [dbo].[OmniStockSyncState];
 
 The tables are expected to be empty in Phase 1, because no event consumer, publisher, worker, WMS simulator or POS simulator exists yet.
 
+## Uninstall DB gate (mechanism + procedure)
+
+**Mechanism (source-proven).** On uninstall, nopCommerce runs
+`PluginService.UninstallPluginsAsync` → `IMigrationManager.ApplyDownMigrations(pluginAssembly)`
+(`src/Libraries/Nop.Services/Plugins/PluginService.cs:581`). `ApplyDownMigrations`
+runs the `Down()` of every **applied** migration in the plugin assembly
+(`src/Libraries/Nop.Data/Migrations/MigrationManager.cs:123-128`; the call passes
+`isApplied: true` — it is *not* limited to schema migrations). The plugin's
+`SchemaMigration.Down()` deletes `IX_OmniStockSyncState_ProductId_WarehouseId`, then
+drops `OmniStockSyncState`, `OmniOrderFulfillment`, `OmniInboxMessage`,
+`OmniOutboxMessage`. **Trigger:** the uninstall is applied by the admin
+**"Restart application to apply the changes"** action (`PluginController.ReloadList` →
+`UninstallPluginsAsync`, `src/Presentation/Nop.Web/Areas/Admin/Controllers/PluginController.cs:361`)
+— **not** by a plain container restart. Install, by contrast, is processed on app
+startup (`AppStartedConsumer` → `InstallPluginsAsync`).
+
+**Procedure (run with admin access).** Current DB connection: host `localhost:1433`,
+database `nopcommerce`, user `sa`, password `Omni_Demo_Pass1` (SQL Server container
+`as_group_project-sqlserver-1`).
+
+1. **Before** — confirm the four tables + index exist:
+   ```bash
+   docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa \
+     -P 'Omni_Demo_Pass1' -C -Q "SELECT name FROM nopcommerce.sys.tables WHERE name LIKE 'Omni%' ORDER BY name; SELECT name FROM nopcommerce.sys.indexes WHERE name='IX_OmniStockSyncState_ProductId_WarehouseId';"
+   ```
+   Expect the 4 tables + the index.
+2. **Uninstall** — Admin → Configuration → Local plugins → *Omnichannel Core* → **Uninstall**.
+3. **Apply** — click the admin **"Restart application to apply the changes"** banner (the *Apply changes* button). This runs `UninstallPluginsAsync` → `ApplyDownMigrations` (drops the tables) then restarts. ⚠️ A plain `docker compose restart nopcommerce` does **not** trigger the uninstall.
+4. **After** — re-run the query in step 1. Expect **0** `Omni%` tables and **0** rows for the index → DB clean.
+5. **Reinstall** — Admin → Local plugins → *Omnichannel Core* → **Install** → click **"Restart application to apply the changes"** (install is processed on the ensuing startup).
+6. **Confirm restored** — re-run step 1 (4 tables back), open `/Admin/OmnichannelCore/Configure` (counts render), place one order to confirm E2E still works.
+
+> Note: uninstall is processed **only** by the admin *Apply changes* action
+> (`UninstallPluginsAsync` is invoked there, not on startup), so the admin UI is the
+> reliable path for the drop. Install *is* processed on startup, so queuing
+> `PluginNamesToInstall` + restart also reinstalls. Back up the DB before either
+> (`BACKUP DATABASE nopcommerce`).
+
+**Results (captured 2026-06-02).** Via admin **Uninstall → Apply changes (restart)**,
+then **Install → Apply changes (restart)**. DB backed up first to
+`/var/opt/mssql/data/pre_uninstall_gate.bak`.
+
+| Check | Before | After uninstall | After reinstall |
+|-------|--------|-----------------|-----------------|
+| `Omni%` tables | 4 | **0** ✅ | **4** ✅ |
+| `IX_OmniStockSyncState_…` index | present | **absent** ✅ | **present** ✅ |
+| Plugin in `InstalledPlugins` | yes | **no** ✅ | **yes** ✅ |
+| `PluginNamesToUninstall` queue | — | processed → `[]` | — |
+
+Post-reinstall sanity: a guest-checkout order produced a fresh `OmniOutboxMessage`
+row (`Id=1`, status `Pending`), confirming the `OrderPlacedEvent` consumer is live on
+the reinstalled plugin.
+
 ## Go/No-Go
 
-Current status: **In review**.
+Current status: **Done** (uninstall DB gate passed 2026-06-02).
 
-The implementation builds in Docker and the install/table/admin checks have been observed locally. The phase should move to **Done** only after the uninstall database gate passes.
+Install/table/admin checks observed locally; Part 2 proved the full E2E path on
+`develop` (`docs/evidence/qa-5-outbox-latency.md`); and the **Uninstall DB gate**
+round-trip is now empirically confirmed — install → 4 tables, uninstall → 0 tables
+(DB clean, index dropped), reinstall → 4 tables, with a post-reinstall order
+producing a fresh outbox row.

@@ -168,7 +168,7 @@ export default function () {
             try {
                 const body = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
                 return body.success === true || body.message;
-            } catch {
+            } catch (e) {
                 return r.status === 200;
             }
         },
@@ -378,7 +378,7 @@ export default function () {
             try {
                 const body = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
                 return body.success === 1 || body.success === true;
-            } catch {
+            } catch (e) {
                 return false;
             }
         },

@@ -38,6 +38,7 @@ public class OmnichannelCoreController : BasePluginController
             OutboxMessages = await _omnichannelCoreService.GetOutboxMessageCountAsync(),
             InboxMessages = await _omnichannelCoreService.GetInboxMessageCountAsync(),
             FulfillmentRecords = await _omnichannelCoreService.GetFulfillmentRecordCountAsync(),
+            PendingFulfillmentRecords = await _omnichannelCoreService.GetPendingFulfillmentCountAsync(),
             StockProjectionRecords = await _omnichannelCoreService.GetStockProjectionRecordCountAsync()
         };
 

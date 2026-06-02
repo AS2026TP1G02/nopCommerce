@@ -38,6 +38,42 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 
 <!-- Most recent first. -->
 
+## 2026-06-02 — Prove E2E on develop + capture QA-5 outbox latency
+
+**Phase**: 2 + 6 (E2E gate + evidence).
+**Driver**: QA-5 (integration off the checkout path); ADR-0003 (outbox), ADR-0011 (reconciler).
+**Files**: `nopCommerce/src/Plugins/Nop.Plugin.Misc.OmnichannelCore/Services/OrderPlacedOutboxConsumer.cs` (`Stopwatch` → `elapsed_ms` on the outbox-queued log); `docs/evidence/qa-5-outbox-latency.md` (new); `load-test/automated-order-placement.js`, `load-test/lib/nopcommerce-helpers.js` (k6 0.49 fix: `} catch {` → `} catch (e) {`).
+**Change**: Proved the happy path end-to-end on merged `develop` (order → outbox Pending → published on the 60 s tick → worker → WMS `WMS-REQ-1001` → fulfillment callback → `OmniOrderFulfillment` Accepted, no column errors), then instrumented the outbox consumer to log `elapsed_ms` and measured QA-5 across 101 orders. Also fixed the k6 harness, which would not compile under k6 0.49 (optional-catch binding) and blocked all order placement.
+**Tradeoff/risk introduced**: none (pure-addition log field + test-harness fix; the measured value averaged 10.3 ms so no meaningful checkout-thread cost).
+**Verification**: outbox write avg 10.3 ms / max 59 ms across 101 orders, 0 over 100 ms (`dbo.Log` `elapsed_ms`); 0 synchronous external HTTP shown by the consumer code path + a WMS-slow test (3 s WMS delay → checkout confirm 311 ms, no penalty); 50+50 orders placed at 100% success. Local only — not pushed.
+
+## 2026-06-02 — QA-4: surface fulfillment-pending count in plugin admin
+
+**Phase**: 5 + 6 (admin operability).
+**Driver**: QA-4 (fulfillment-pending count visible to an operator); ADR-0010 (admin observability).
+**Files**: `Services/OmnichannelCoreService.cs` (`GetPendingFulfillmentCountAsync`, StatusId ∈ {Pending=10, Degraded=20}); `Models/ConfigurationModel.cs` (`PendingFulfillmentRecords`); `Controllers/OmnichannelCoreController.cs` (Configure sets it); `Views/Configure.cshtml` (pending row + refreshed the now-false "messaging deferred" blurb).
+**Change**: Added a pending/degraded fulfillment count to the plugin admin Configure page so QA-4's "fulfillment-pending count" is demonstrable from the admin, paired with the RabbitMQ queue/DLQ view. Confirmed the worker posts status `pending` on circuit-breaker-open (`services/worker/WmsClient.cs:80`), so the count reflects a real WMS-outage backlog.
+**Tradeoff/risk introduced**: none (read-only count + one view row); requires a nopcommerce image rebuild to ship the plugin DLL.
+**Verification**: `docker compose build nopcommerce` → 0 errors; container recreated healthy; method validated against live data (110 fulfillments, all Accepted → pending = 0, correct). Demonstration of a non-zero count handed to Diogu for the QA-4 WMS-outage run. Local only.
+
+## 2026-06-02 — Phase-1 uninstall gate proven (DB clean on uninstall, restored on reinstall)
+
+**Phase**: 1.
+**Driver**: Phase-1 verification gate (uninstall leaves DB clean).
+**Files**: `docs/evidence/phase-1-plugin-scaffold.md` ("Uninstall DB gate" section + results); flips Phase 1 → Done.
+**Change**: Documented the source-proven uninstall→drop mechanism, then ran it (João drove the admin UI, I verified via SQL). **Mechanism correction**: the uninstall (`UninstallPluginsAsync` → `ApplyDownMigrations` → `SchemaMigration.Down()`) is applied by the admin **"Restart application to apply the changes"** action (`PluginController.ReloadList`, `:361`), **not** a plain container restart (a plain restart left the queue unprocessed); install is processed on app startup (`AppStartedConsumer` → `InstallPluginsAsync`).
+**Tradeoff/risk introduced**: none (destructive but DB-backed-up to `/var/opt/mssql/data/pre_uninstall_gate.bak`; reinstall restored the stack).
+**Verification**: before = 4 `Omni%` tables + index present; after uninstall = **0** tables, index gone, plugin removed from `InstalledPlugins`, `PluginNamesToUninstall` queue cleared; after reinstall = **4** tables + index back, plugin installed, and a guest order flowed end-to-end (outbox → published → worker → WMS `WMS-REQ-2001` → fulfillment **Accepted**). Phase 1 → **Done**. Local only.
+
+## 2026-06-02 — Non-destructive full-stack restart smoke
+
+**Phase**: 6 (operability / bring-up).
+**Driver**: Phase-6 gate (stack returns to a healthy state); QA-4 operability.
+**Files**: none (runtime verification only; `docker compose down && docker compose up -d`, volumes kept).
+**Change**: Restarted the whole stack (containers removed and recreated, volumes preserved) to confirm it comes back healthy without losing the nopCommerce install or data.
+**Tradeoff/risk introduced**: none. Note: a true clean-slate `make clean` additionally wipes the DB + App_Data (no auto-install), so a fresh-clone bring-up needs the documented install steps — deferred to a pre-demo step.
+**Verification**: all six containers reached `healthy` after `down`+`up`; storefront HTTP 200; plugin `Misc.OmnichannelCore` still installed; 110 fulfillment rows preserved. Local only.
+
 ## 2026-06-02 — Align plugin↔worker envelope contract + close out roldão's Phase-2/5/6 deliverables
 
 **Phase**: 2 + 5 + 6 (integration boundary + traceability + ADRs).

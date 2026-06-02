@@ -71,6 +71,19 @@ public class OmnichannelCoreService
     }
 
     /// <summary>
+    /// Gets the count of fulfillment rows still Pending or Degraded (QA-4 operability:
+    /// the "fulfillment-pending count" surfaced in the admin alongside the RabbitMQ dashboard)
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task<int> GetPendingFulfillmentCountAsync()
+    {
+        return await _orderFulfillmentRepository.Table
+            .Where(fulfillment => fulfillment.StatusId == (int)OmniFulfillmentStatus.Pending
+                || fulfillment.StatusId == (int)OmniFulfillmentStatus.Degraded)
+            .CountAsync();
+    }
+
+    /// <summary>
     /// Gets the outbox messages written for an order (QA-3 trace lookup)
     /// </summary>
     /// <param name="orderGuid">Order GUID</param>

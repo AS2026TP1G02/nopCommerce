@@ -4,10 +4,10 @@ Resilience and recovery scenario: WMS returns HTTP `503` for 30 seconds while
 checkout continues. After WMS returns to normal, the backlog drains without
 manual intervention.
 
-> **Status:** measurement template prepared. Runtime numbers are not captured
-> yet, but the Phase 2 happy path prerequisite is now confirmed by a real
-> `OmniOrderFulfillment` row captured on 2026-06-02. QA-1 still needs the
-> degraded-window measurements, queue snapshots, and backlog-drain timing.
+> **Status:** measured on 2026-06-02. The run confirms graceful degradation and
+> eventual recovery, but the broker-side drain time still exceeded the original
+> `<= 60 s` target. Checkout latency and the "no orders pending > 5 min" rule
+> both passed.
 
 ## Source Scenario
 
@@ -141,15 +141,110 @@ docker compose logs worker --since 10m | tee /tmp/worker-qa1-pressure.log
 
 | Metric | Result | Pass/Fail |
 |--------|--------|-----------|
-| WMS unavailable window | Pending | Pending |
-| Checkout attempts | Pending | Pending |
-| Successful checkouts | Pending | Pending |
-| Failed checkouts attributable to WMS | Pending | Pending |
-| Degraded P95 checkout latency | Pending | Pending |
+| WMS unavailable window | `2026-06-02T20:43:26+01:00` -> `2026-06-02T20:44:35+01:00` | Reference |
+| Checkout attempts | `50` | Pass |
+| Successful checkouts | `50` | Pass |
+| Failed checkouts attributable to WMS | `0` | Pass |
+| Degraded P95 checkout latency | `1822.2 ms` | Pass |
 | QA-1 P95 threshold | `2085 ms` | Reference |
-| Queue depth at peak | Pending | Pending |
-| Backlog drain time after WMS normal | Pending | Pending |
-| Orders pending after 5 min | Pending | Pending |
+| Queue depth at peak | `27` unacknowledged on `wms.order.placed` | Observed |
+| Backlog drain time after WMS normal | `~5m33s` until queue returned to `0/0/0` | Fail |
+| Orders pending after 5 min | `0` | Pass |
+
+## Observed Run
+
+### k6 Summary
+
+Source: `/tmp/loadtest-qa1-pressure.log`
+
+- `50 / 50` orders succeeded.
+- `order_success_rate = 100%`
+- `order_placement_duration_ms p(95) = 1822.2 ms`
+- `http_req_failed = 0.00%`
+
+This satisfies the degraded user-facing part of QA-1:
+
+- checkout stayed available during WMS outage
+- no checkout failures were attributable to WMS
+- degraded checkout P95 stayed below the `2085 ms` threshold
+
+### Worker Recovery Evidence
+
+Source: `/tmp/worker-qa1-pressure.log`
+
+Observed sequence:
+
+- repeated WMS `503` responses during the unavailable window
+- `WMS circuit breaker OPENED for 30s`
+- repeated `Circuit breaker open, requeuing message after delay ...`
+- `WMS circuit breaker CLOSED — draining backlog`
+- accepted fulfillment callbacks resumed with real `external_request_id` values
+
+Representative log excerpt:
+
+```text
+WMS circuit breaker OPENED for 30s — marking fulfillments degraded
+Circuit breaker open, requeuing message after delay order_guid=0561a9c4-9e24-4e57-87b9-aa1c95f364b2 ...
+WMS circuit breaker CLOSED — draining backlog
+Posted fulfillment callback order_guid=0561a9c4-9e24-4e57-87b9-aa1c95f364b2 ... external_request_id=WMS-REQ-1002 status=Accepted
+```
+
+### RabbitMQ Queue Snapshots
+
+Immediately after recovery:
+
+```text
+name                messages  messages_ready  messages_unacknowledged
+wms.order.placed    6         0               6
+wms.order.placed.dlq 0        0               0
+```
+
+Approx. 60 seconds into recovery:
+
+```text
+name                messages  messages_ready  messages_unacknowledged
+wms.order.placed    27        0               27
+wms.order.placed.dlq 0        0               0
+```
+
+At `2026-06-02T20:50:08+01:00`:
+
+```text
+name                messages  messages_ready  messages_unacknowledged
+wms.order.placed    0         0               0
+wms.order.placed.dlq 0        0               0
+```
+
+Interpretation:
+
+- no poison messages were sent to the DLQ
+- the worker now keeps breaker-open orders in play by requeuing them
+- the queue did eventually drain, but not within the original `<= 60 s` target
+
+### Fulfillment Recovery Evidence
+
+Source: `OmniOrderFulfillment`
+
+After recovery, all outage-created fulfillment rows transitioned back to
+accepted. The recovered cohort (`OrderId 1002` through `1026`) shows:
+
+```text
+MinAcceptedOnUtc = 2026-06-02 19:44:41.410000
+MaxAcceptedOnUtc = 2026-06-02 19:46:43.112000
+AcceptedCount    = 25
+```
+
+Five-minute pending check:
+
+```text
+SELECT ... FROM OmniOrderFulfillment WHERE StatusId <> 30
+
+(0 rows affected)
+```
+
+This satisfies the second recovery rule:
+
+- no orders remained pending more than 5 minutes after WMS recovery
 
 ## Evidence Artifacts
 
@@ -162,8 +257,15 @@ Planned capture paths:
 
 ## Current Conclusion
 
-Not fully measured yet. The WMS simulator and Compose infrastructure are ready,
-and at least one normal order has already reached `OmniOrderFulfillment`.
-Remaining work is the degraded-window run itself: capture checkout P95 under WMS
-`503`, record queue buildup, measure drain time after recovery, and confirm no
-orders stay pending for more than 5 minutes.
+QA-1 is now measured.
+
+Outcome: **partial pass**.
+
+- The resilience behavior works from a user and data-consistency perspective:
+  checkout stayed healthy, the worker degraded cleanly, and pending fulfillments
+  were eventually reconciled.
+- The strict broker-side recovery target is still not met: `wms.order.placed`
+  did not return to zero within `60 s` after WMS recovery.
+
+This should be presented as an implementation improvement over the earlier
+failed run, but not as a full pass against the original QA-1 drain-time gate.

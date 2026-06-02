@@ -13,6 +13,7 @@ public class OmnichannelCallbackController : Controller
     #region Fields
 
     private readonly IConfiguration _configuration;
+    private readonly OmniFulfillmentService _omniFulfillmentService;
     private readonly OmniInboxService _omniInboxService;
     private readonly OmniStockSyncService _omniStockSyncService;
 
@@ -21,10 +22,12 @@ public class OmnichannelCallbackController : Controller
     #region Ctor
 
     public OmnichannelCallbackController(IConfiguration configuration,
+        OmniFulfillmentService omniFulfillmentService,
         OmniInboxService omniInboxService,
         OmniStockSyncService omniStockSyncService)
     {
         _configuration = configuration;
+        _omniFulfillmentService = omniFulfillmentService;
         _omniInboxService = omniInboxService;
         _omniStockSyncService = omniStockSyncService;
     }
@@ -108,6 +111,78 @@ public class OmnichannelCallbackController : Controller
         }
     }
 
+    [HttpPost("fulfillment/status-changed")]
+    public virtual async Task<IActionResult> FulfillmentStatusChanged([FromBody] FulfillmentStatusChangedRequest request)
+    {
+        if (!IsAuthorized())
+            return Unauthorized(new OmnichannelCallbackResponse
+            {
+                Result = "unauthorized",
+                Detail = $"Missing or invalid {OmnichannelCoreDefaults.DemoTokenHeaderName} header"
+            });
+
+        var validationError = ValidateFulfillment(request);
+        if (validationError != null)
+            return BadRequest(new OmnichannelCallbackResponse
+            {
+                Result = "invalid",
+                MessageId = request?.MessageId ?? Guid.Empty,
+                CorrelationId = request?.CorrelationId,
+                Detail = validationError
+            });
+
+        var inboxResult = await _omniInboxService.TryBeginProcessingAsync(new InboxMessageContext
+        {
+            MessageId = request.MessageId,
+            EventType = request.EventType,
+            CorrelationId = request.CorrelationId,
+            Source = request.Source,
+            OrderGuid = request.Payload.OrderGuid
+        });
+
+        if (inboxResult.IsDuplicate)
+            return Ok(new OmnichannelCallbackResponse
+            {
+                Result = "duplicate",
+                MessageId = request.MessageId,
+                CorrelationId = request.CorrelationId,
+                InboxId = inboxResult.InboxMessage?.Id,
+                Duplicate = true,
+                Detail = "messageId already exists in OmniInboxMessage"
+            });
+
+        try
+        {
+            var fulfillment = await _omniFulfillmentService.ApplyFulfillmentStatusChangedAsync(request);
+
+            await _omniInboxService.MarkProcessedAsync(inboxResult.InboxMessage);
+
+            return Ok(new OmnichannelCallbackResponse
+            {
+                Result = "applied",
+                MessageId = request.MessageId,
+                CorrelationId = request.CorrelationId,
+                InboxId = inboxResult.InboxMessage.Id,
+                Applied = true,
+                Duplicate = false,
+                Detail = $"fulfillment {fulfillment.Status} for order {request.Payload.OrderGuid}"
+            });
+        }
+        catch (Exception exception)
+        {
+            await _omniInboxService.MarkFailedAsync(inboxResult.InboxMessage, exception.Message);
+
+            return StatusCode(500, new OmnichannelCallbackResponse
+            {
+                Result = "failed",
+                MessageId = request.MessageId,
+                CorrelationId = request.CorrelationId,
+                InboxId = inboxResult.InboxMessage.Id,
+                Detail = exception.Message
+            });
+        }
+    }
+
     #endregion
 
     #region Utilities
@@ -144,6 +219,32 @@ public class OmnichannelCallbackController : Controller
 
         if (request.SourceVersion < 0)
             return "sourceVersion cannot be negative";
+
+        return null;
+    }
+
+    private static string ValidateFulfillment(FulfillmentStatusChangedRequest request)
+    {
+        if (request == null)
+            return "Request body is required";
+
+        if (request.MessageId == Guid.Empty)
+            return "messageId is required";
+
+        if (string.IsNullOrWhiteSpace(request.EventType))
+            return "eventType is required";
+
+        if (!string.Equals(request.EventType, OmnichannelCoreDefaults.FulfillmentStatusChangedEventType, StringComparison.Ordinal))
+            return $"eventType must be {OmnichannelCoreDefaults.FulfillmentStatusChangedEventType}";
+
+        if (request.Payload == null)
+            return "payload is required";
+
+        if (request.Payload.OrderGuid == Guid.Empty)
+            return "orderGuid is required";
+
+        if (string.IsNullOrWhiteSpace(request.Payload.Status))
+            return "status is required";
 
         return null;
     }

@@ -19,6 +19,10 @@ The decision affects ADR-0005 (boundary discipline) and the consistency guarante
 
 Write-through is **deferred** to Part 2 measurement. If projection drift proves operationally unacceptable in the demo, a controlled write-through path can be added in a later iteration without changing the integration contract.
 
+## Part 2 outcome (2026-06)
+
+Projection-only was **retained** — no write-through path was added. The QA-2 consistency runs (duplicate/stale POS events rejected, projection-only `OmniStockSyncState` updated) showed the projection is sufficient for the demo: drift is intentionally visible in the admin trace view rather than silently merged into core stock. The deferred write-through remains a documented, contract-preserving option for a future iteration if a real deployment needs storefront availability to reflect POS sales.
+
 ## Consequences
 
 - Core stock state remains owned by nopCommerce; ADR-0005 is preserved.

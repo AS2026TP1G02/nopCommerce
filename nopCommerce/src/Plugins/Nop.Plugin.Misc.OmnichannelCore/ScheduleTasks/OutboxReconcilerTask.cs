@@ -1,5 +1,6 @@
 using Nop.Data;
 using Nop.Plugin.Misc.OmnichannelCore.Domains;
+using Nop.Plugin.Misc.OmnichannelCore.Services;
 using Nop.Services.Logging;
 using Nop.Services.Orders;
 using Nop.Services.ScheduleTasks;
@@ -17,8 +18,8 @@ namespace Nop.Plugin.Misc.OmnichannelCore.ScheduleTasks;
 /// Verification gate (plan.md Phase 2): reconciler runs on schedule and reports 0
 /// missing rows on a healthy run.
 ///
-/// SCAFFOLD: the missing-row detection + back-fill is wired against recent orders;
-/// the lookback window and payload shape mirror the consumer and must be kept in sync.
+/// The back-filled row uses the shared <see cref="OutboxMessageFactory"/>, so its payload
+/// is identical to the fast-path consumer's.
 /// </summary>
 public class OutboxReconcilerTask : IScheduleTask
 {
@@ -26,7 +27,10 @@ public class OutboxReconcilerTask : IScheduleTask
 
     private readonly IOrderService _orderService;
     private readonly IRepository<OmniOutboxMessage> _outboxMessageRepository;
+    private readonly OutboxMessageFactory _outboxMessageFactory;
     private readonly ILogger _logger;
+
+    private const int LookbackHours = 24;
 
     #endregion
 
@@ -34,10 +38,12 @@ public class OutboxReconcilerTask : IScheduleTask
 
     public OutboxReconcilerTask(IOrderService orderService,
         IRepository<OmniOutboxMessage> outboxMessageRepository,
+        OutboxMessageFactory outboxMessageFactory,
         ILogger logger)
     {
         _orderService = orderService;
         _outboxMessageRepository = outboxMessageRepository;
+        _outboxMessageFactory = outboxMessageFactory;
         _logger = logger;
     }
 
@@ -45,10 +51,14 @@ public class OutboxReconcilerTask : IScheduleTask
 
     #region Methods
 
+    /// <summary>
+    /// Executes the task: back-fills outbox rows for recent orders that have none
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation</returns>
     public async Task ExecuteAsync()
     {
         // Look back over a recent window; orders older than this are assumed settled.
-        var lookbackFromUtc = DateTime.UtcNow.AddHours(-24);
+        var lookbackFromUtc = DateTime.UtcNow.AddHours(-LookbackHours);
 
         var recentOrders = await _orderService.SearchOrdersAsync(
             createdFromUtc: lookbackFromUtc,
@@ -67,21 +77,8 @@ public class OutboxReconcilerTask : IScheduleTask
                 continue;
 
             missing += 1;
-            var now = DateTime.UtcNow;
-            var messageId = Guid.NewGuid();
-
-            await _outboxMessageRepository.InsertAsync(new OmniOutboxMessage
-            {
-                MessageId = messageId,
-                EventType = OmnichannelCoreDefaults.OrderPlacedEventType,
-                CorrelationId = order.OrderGuid.ToString("D"),
-                OrderGuid = order.OrderGuid,
-                OrderId = order.Id,
-                Payload = string.Empty, // TODO Phase 2: serialize same shape as the consumer.
-                Status = OmniOutboxMessageStatus.Pending,
-                RetryCount = 0,
-                CreatedOnUtc = now
-            });
+            var message = await _outboxMessageFactory.BuildOrderPlacedMessageAsync(order);
+            await _outboxMessageRepository.InsertAsync(message);
         }
 
         if (missing > 0)

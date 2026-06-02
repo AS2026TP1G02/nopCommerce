@@ -86,8 +86,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | João Roldão | `[x]` Plugin scaffold (copy `nopCommerce/src/Plugins/Nop.Plugin.Misc.Omnisend/` structure), `plugin.json`, lifecycle, `Install/Uninstall` | `nopCommerce/src/Plugins/Nop.Plugin.Misc.OmnichannelCore/` |
 | João Roldão | `[x]` Migrations for `OmniOutboxMessage`, `OmniInboxMessage`, `OmniOrderFulfillment`, `OmniStockSyncState` | `.../OmnichannelCore/Migrations/` |
-| João Roldão | `[ ]` Write [ADR-0011](docs/adr/0011-order-outbox-insertion-strategy.md) (consumer + reconciler strategy) | `docs/adr/0011-order-outbox-insertion-strategy.md` |
-| João Roldão | `[ ]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
+| João Roldão | `[x]` Write [ADR-0011](docs/adr/0011-order-outbox-insertion-strategy.md) (consumer + reconciler strategy) | `docs/adr/0011-order-outbox-insertion-strategy.md` |
+| João Roldão | `[x]` Add Consequences + Tradeoffs bullet for demo-token auth | `docs/adr/0005-no-shared-database-boundaries.md` |
 | João Varela | `[x]` Admin view shells (empty MVC controller + view skeleton) | `.../OmnichannelCore/Controllers/`, `.../Views/` |
 | João Varela | `[x]` POS simulator scaffold (HTTP server, mode placeholder) | `services/pos-sim/` (new) |
 | António | `[x]` Worker service project scaffold; envelope library project | `services/worker/`, `services/contracts/` (new) |
@@ -120,17 +120,17 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Roldão | `[ ]` `OrderPlacedEvent` consumer writes outbox row | `.../OmnichannelCore/Infrastructure/EventConsumer.cs` |
-| João Roldão | `[ ]` Scheduled outbox publisher (publisher confirms on) | `.../OmnichannelCore/ScheduleTasks/OutboxPublisherTask.cs` |
-| João Roldão | `[ ]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
-| João Roldão | `[ ]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
+| João Roldão | `[x]` `OrderPlacedEvent` consumer writes outbox row | `.../OmnichannelCore/Services/OrderPlacedOutboxConsumer.cs` |
+| João Roldão | `[x]` Scheduled outbox publisher (publisher confirms on) | `.../OmnichannelCore/ScheduleTasks/OutboxPublisherTask.cs` |
+| João Roldão | `[x]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
+| João Roldão | `[x]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
 | João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
 | Diogu | `[ ]` Docker Compose stitches every service/container; true E2E remains pending plugin RabbitMQ publish + fulfillment callback | `docker-compose.yml`, `docs/setup.md` |
 | Diogu | `[x]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
-| João Roldão + António | `[ ]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` |
+| João Roldão + António | `[x]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` (envelope frozen + documented in ADR-0009) |
 
 **Verification gate** (Sun 24 May)
 
@@ -209,11 +209,11 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Roldão | `[ ]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Admin/`, `.../OmnichannelCore/Controllers/OmnichannelAdminController.cs` |
+| João Roldão | `[x]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Trace.cshtml`, `.../OmnichannelCore/Controllers/OmnichannelCoreController.cs` (`Trace` action; worker attempts via MessageId → RabbitMQ UI / worker logs) |
 | João Varela | `[ ]` Plugin-side structured logs carrying `OrderGuid` + `messageId` + `externalRequestId` | `.../OmnichannelCore/` (cross-cutting) |
 | António | `[x]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
 | Diogu | `[x]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough and infrastructure smoke captured | `docker-compose.yml`, `docs/setup.md`, `docs/evidence/qa-4-operability.md` |
-| João Roldão + António | `[ ]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
+| João Roldão + António | `[x]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
 
 **Verification gate** (Fri 29 May)
 
@@ -236,7 +236,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 |-------|------|---------------|
 | João Varela | `[ ]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
 | Diogu | `[~]` Evidence pack: baseline + QA-4 infrastructure captured; QA-1 runtime numbers pending plugin E2E unblock | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
-| João Roldão | `[ ]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` |
+| João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
 | Diogu | `[ ]` Demo + measurement slides; final Compose smoke from a fresh clone | (slides repo), `docker-compose.yml` |

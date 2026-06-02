@@ -247,7 +247,8 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
 | António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
-| Diogu | `[ ]` Demo + measurement slides; final Compose smoke from a fresh clone | (slides repo), `docker-compose.yml` |
+| Diogu | `[ ]` Demo + measurement slides | (slides repo) |
+| João Varela | `[ ]` Final Compose smoke from a fresh clone | `docker-compose.yml` |
 | All 4 | `[ ]` Full end-to-end dry run of all 5 demo scenarios (normal, WMS unavailable + recovery, POS legitimate update, POS duplicate, POS stale) | (demo scripts) |
 
 **Verification gate** (Sun 31 May)
@@ -260,7 +261,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 **Risks**
 
-- Docker Compose drift between dev machines → mitigation: Diogu does the fresh-clone smoke on a different machine if possible on day 18.
+- Docker Compose drift between dev machines → mitigation: João Varela does the fresh-clone smoke on a different machine if possible on day 18.
 - Running out of time on evidence collection vs implementation polish → mitigation: João Varela + Diogu start evidence consolidation on the morning of day 17, not day 18.
 
 ## Parallelism map
@@ -292,7 +293,7 @@ Phase 3 and Phase 4 share **zero files**: Phase 3 touches `services/worker/` + `
 | Scheduled-task publish lag exceeds 60 s under load | 2 | Pair A (João Roldão) | Measure on day 1 of Phase 2; if > 60 s, reduce task interval or batch size before Phase 3. |
 | Circuit-breaker thresholds tuned for unit tests, not the live demo | 3 | Pair B (António) | Diogu runs the QA-1 scenario in demo-like conditions on day 14, not just day 12. |
 | Structured-logging discipline drifts on error paths | 5 | Pair A + Pair B | 30-min cross-pair log review on day 16 catches missing IDs before evidence collection. |
-| Docker Compose works on one machine, fails on another | 6 | Diogu | Fresh-clone smoke from a second machine on day 18. |
+| Docker Compose works on one machine, fails on another | 6 | João Varela | Fresh-clone smoke from a second machine on day 18. |
 | One dev goes silent for several days (classes / illness) | any | Pair partner | Pair PR review means the partner has full context; daily stand-up surfaces blockers within 24 h. |
 
 ## Pre-freeze verification checklist (2026-05-31)

@@ -47,14 +47,32 @@ The rubric explicitly penalises "large amounts of generated code with little arc
 **Tradeoff/risk introduced**: Payload change is a Pair A↔B boundary change (versioned event) — conforms to António's contract; flagged for his review. The plugin still logs via interpolated strings (nopCommerce `ILogger` has no structured-template API), but field names match the worker so QA-3 grep works.
 **Verification**: plugin + worker + contracts build in `mcr.microsoft.com/dotnet/sdk:10.0` → 0 errors; `dotnet test --filter ~OmnichannelCore` → 12/12 pass. Live `docker compose up --build`: published a nested `commerce.order.placed.v1` → worker deserialized it → WMS accepted (`WMS-REQ-8888`) → fulfillment callback **HTTP 200** → `OmniOrderFulfillment` Accepted + inbox Processed, **DLQ = 0**, both directions confirmed (OrderGuid `b8d5dd64-…`). Local only — not pushed.
 
+## 2026-06-01 — POS normal callback smoke evidence
+
+**Phase**: 4.
+**Driver**: QA-2 consistency; ADR-0006 idempotent inbox, ADR-0007 projection-first stock.
+**Files**: `docs/evidence/qa-2-consistency.md`, `journal.md`.
+**Change**: Added the Compose-based POS normal callback smoke command and observed response showing the POS simulator reached the plugin callback, returned HTTP 200, inserted an inbox row, and inserted a stock projection row.
+**Tradeoff/risk introduced**: This verifies only the normal POS callback path; duplicate and stale runtime measurements remain pending.
+**Verification**: `curl -i --max-time 15 -X POST http://localhost:8082/emit -H 'Content-Type: application/json' -d '{"mode":"normal","productId":15,"sku":"LAPTOP-15","warehouseId":2,"quantityOnHand":3}'` returned HTTP 200 with `Result=applied`, `InboxId=1`, `StockSyncStateId=1`, `Applied=true`, `Duplicate=false`, `Stale=false`, and `SourceVersion=41`.
+
 ## 2026-06-01 — Fix compose so scheduled tasks auto-fire + install persists
 
 **Phase**: fixup (infra; resolves the scheduler-port risk flagged in the entry below).
 **Driver**: QA-5 (outbox auto-publishes on schedule, no manual trigger) and operability.
 **Files**: `docker-compose.yml` — `nopcommerce` now sets `ASPNETCORE_URLS=http://+:8080`, maps `8080:8080`, healthcheck on `:8080`, and mounts a new `nopcommerce_appdata` volume at `/app/App_Data`; `worker`/`pos-sim` base URLs → `http://nopcommerce:8080`.
-**Change**: (1) Aligned the container's listening port to 8080 so it matches the store URL (`http://localhost:8080`, set at install) that `TaskScheduler.cs` uses for its self-POST to `/scheduletask/runtask` — Kestrel was on :80, so the self-call was refused and scheduled tasks never auto-fired. (2) Added a persistent `App_Data` volume so recreating the container no longer drops the install marker (`appsettings.json` connection string + `plugins.json`) while the SQL DB stays populated — that mismatch caused "Sequence contains more than one element" when the install wizard re-ran against a populated DB.
+**Change**: (1) Aligned the container's listening port to 8080 so it matches the store URL (`http://localhost:8080, set at install) that `TaskScheduler.cs` uses for its self-POST to `/scheduletask/runtask` — Kestrel was on :80, so the self-call was refused and scheduled tasks never auto-fired. (2) Added a persistent `App_Data` volume so recreating the container no longer drops the install marker (`appsettings.json` connection string + `plugins.json`) while the SQL DB stays populated — that mismatch caused "Sequence contains more than one element" when the install wizard re-ran against a populated DB.
 **Tradeoff/risk introduced**: One-time `docker compose down -v` was needed to clear the half-installed state created before the volume existed (Diogu's compose lane — note for fresh clones: install state now persists in the `nopcommerce_appdata` volume).
 **Verification**: `docker compose up` (6/6 healthy); placed an order and waited — outbox auto-published on the 60 s scheduler tick (`/scheduletask/runtask` → HTTP 204, `ScheduleTask.LastStartUtc` now advances; previously NULL with `Connection refused`) → worker → WMS → `OmniOrderFulfillment` Accepted + inbox Processed, all linked by OrderGuid `93fd84e7-…`, with NO manual task trigger. Install survives container recreate. Local only — not pushed.
+
+## 2026-06-01 — Pair B setup and operability evidence
+
+**Phase**: 2, 3, 5, 6.
+**Driver**: QA-1 resilience/recovery, QA-4 operability; ADR-0004 simulator boundary, ADR-0010 structured-log observability.
+**Files**: `docs/setup.md`, `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `plan.md`, `journal.md`.
+**Change**: Expanded the Compose setup guide with concrete nopCommerce install values, simulator controls, RabbitMQ operator checks, load-test command, baseline threshold and the current plugin E2E prerequisite. Added the QA-1 pressure-test evidence template and QA-4 operability evidence, including local Compose health, RabbitMQ queue snapshot and WMS mode-toggle outputs.
+**Tradeoff/risk introduced**: QA-1 and final QA-4 remain partial evidence until the plugin publishes outbox rows to RabbitMQ, accepts worker fulfillment callbacks, and exposes pending fulfillment state.
+**Verification**: `docker compose ps` showed `nopcommerce`, `sqlserver`, `rabbitmq`, `worker`, `wms-sim` and `pos-sim` healthy; WMS `/health` and `/mode` returned `normal`; POS `/health` and `/mode` returned `normal`; `rabbitmqctl list_queues` showed `wms.order.placed` and `wms.order.placed.dlq` with `0` messages; WMS mode toggles succeeded for `slow`, `unavailable`, `contradictory` and back to `normal`.
 
 ## 2026-06-01 — Integrate outbox/trace branch with develop: build fixes, tests, full E2E smoke
 

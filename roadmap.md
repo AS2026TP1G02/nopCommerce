@@ -8,9 +8,9 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
 | 1   | Plugin scaffolding + tables            | Migration Stage 1                    | In review  |
 | 2   | RabbitMQ + worker + normal flow        | Migration Stage 2 (Iter. 1 happy)    | Not started|
 | 3   | Resilience under pressure              | Migration Stage 3 (Iter. 1 pressure) | Not started|
-| 4   | Consistency: idempotent inbox + POS    | Migration Stage 4 (Iter. 2)          | In progress|
-| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | Not started|
-| 6   | Evidence pack + demo + presentation    | Part 2 final delivery                | Not started|
+| 4   | Consistency: idempotent inbox + POS    | Migration Stage 4 (Iter. 2)          | Done       |
+| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | In review  |
+| 6   | Evidence pack + demo + presentation    | Part 2 final delivery                | In progress|
 
 ---
 
@@ -71,28 +71,29 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] Inbox enforcement on every plugin callback endpoint.
   - [x] `sourceVersion` comparison on stock updates; older versions ignored.
   - [x] POS simulator with `duplicate` and `stale` modes.
-  - [ ] Unit tests for `messageId` deduplication and `sourceVersion` staleness.
+  - [x] Unit tests for `messageId` deduplication and `sourceVersion` staleness.
   - [x] Demo script: duplicate POS event → ignored; stale POS event → ignored; legitimate update → applied.
 - **Verification gate**: QA-2 measures hit (duplicate detected ≤ 50 ms; 0 duplicate fulfillment rows; older `sourceVersion` ignored). Go/no-go: **Go** on idempotent inbox; **Partial-go** on projection-only stock (write-through deferred).
-- **Current evidence**: see [QA-2 POS consistency](docs/evidence/qa-2-consistency.md) and [QA-3 plugin-side traceability](docs/evidence/qa-3-traceability.md). Docker builds pass; runtime QA measurements still need to be captured before the phase can move to `Done`.
+- **Current evidence**: see [QA-2 POS consistency](docs/evidence/qa-2-consistency.md). Runtime measurements are captured: duplicate rejected in `17.485 ms`, duplicate inbox count is `1`, POS created `0` fulfillment rows, and stale `sourceVersion` was ignored.
 - **Risks**: `sourceVersion` clock semantics broken by POS sim's clock model; inbox table growth not capped (acceptable for demo).
 
 ## Phase 5 — Traceability: correlation + admin (Iteration 3)
 
 - **Goal**: make a delayed/recovering order self-explanatory from the admin view.
 - **Deliverables**:
-  - [ ] Standard envelope (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) on every message; producer/consumer enforce.
-  - [ ] `OrderGuid` + `messageId` + `externalRequestId` on every log line and DB row in the integration path.
-  - [ ] Plugin admin view: enter `OrderGuid` → see outbox row, MQ message ID, worker attempts, fulfillment state.
-  - [ ] Worker logs structured with same IDs.
+  - [x] Standard envelope (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) on every message; producer/consumer enforce.
+  - [x] `OrderGuid` + `messageId` + `externalRequestId` on DB rows and integration logs in the order path.
+  - [x] Plugin admin view: enter `OrderGuid` → see outbox row, MQ message ID, fulfillment state, and worker-attempt lookup guidance.
+  - [x] Worker logs structured with same IDs.
 - **Verification gate**: QA-3 + QA-4 measures hit (100% of orders link end-to-end; resolution path ≤ 3 admin clicks; queue/retry/DLQ visible in single dashboard view). Go/no-go: **Go** on correlation propagation.
+- **Current evidence**: see [QA-3 order-to-fulfillment traceability](docs/evidence/qa-3-traceability.md). QA-3 is complete with 10/10 traceable orders and a ≤ 3-click admin path. QA-4 remains tracked separately in [QA-4 operability](docs/evidence/qa-4-operability.md).
 - **Risks**: admin view scope creep; structured-logging discipline drifts late in the project.
 
 ## Phase 6 — Evidence pack + demo + presentation
 
 - **Goal**: produce the Part 2 final deliverable — a runnable demo, an evidence pack, an updated architecture report, and the live presentation.
 - **Deliverables**:
-  - [ ] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps.
+  - [~] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps.
   - [ ] Updated `docs/architecture-report.md` (short, focused — scenario, drivers, ADD application, target arch, evolution path, limits).
   - [ ] Updated ADRs reflecting any Part 2 reality vs Part 1 plan (e.g., write-through decision after measurement).
   - [ ] Live demo script: 5 scenarios from `presentation-script.md` slide 10 (normal flow, WMS down, recovery, POS update, duplicate/stale).

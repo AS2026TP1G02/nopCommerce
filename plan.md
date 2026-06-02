@@ -124,7 +124,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | João Roldão | `[x]` Scheduled outbox publisher (publisher confirms on) | `.../OmnichannelCore/ScheduleTasks/OutboxPublisherTask.cs` |
 | João Roldão | `[x]` Reconciler scheduled task (per ADR-0011): scans recent orders without outbox rows | `.../OmnichannelCore/ScheduleTasks/OutboxReconcilerTask.cs` |
 | João Roldão | `[x]` Internal callback endpoint for `fulfillment.status.changed.v1` | `.../OmnichannelCore/Controllers/OmnichannelCallbackController.cs` |
-| João Varela | `[ ]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
+| João Varela | `[x]` Inbox table read/write skeleton (used in Phase 4) | `.../OmnichannelCore/Services/OmniInboxService.cs` |
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
@@ -193,6 +193,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 **Verification gate** (Wed 27 May)
 
 - **QA-2**: duplicate `messageId` rejected ≤ 50 ms; 0 duplicate fulfillment rows; older `sourceVersion` ignored.
+- **Current result (2026-06-02)**: complete. Duplicate callback rejected in `17.485 ms`; duplicate `messageId` count is `1`; POS scenario created `0` fulfillment rows before order-flow evidence; stale version `44` did not overwrite stored version `45`. See [QA-2 evidence](docs/evidence/qa-2-consistency.md).
 - Go decision on Iteration 2 logged in `docs/part1/architecture-checkpoint.md` §6 (and partial-go on projection-only stock per ADR-0007).
 
 **Risks**
@@ -210,7 +211,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | João Roldão | `[x]` Plugin admin view by `OrderGuid`: returns outbox row, MQ message ID, worker attempts, fulfillment state | `.../OmnichannelCore/Views/Trace.cshtml`, `.../OmnichannelCore/Controllers/OmnichannelCoreController.cs` (`Trace` action; worker attempts via MessageId → RabbitMQ UI / worker logs) |
-| João Varela | `[ ]` Plugin-side structured logs carrying `OrderGuid` + `messageId` + `externalRequestId` | `.../OmnichannelCore/` (cross-cutting) |
+| João Varela | `[x]` Plugin-side log fields cross-checked with worker/WMS fields (`order_guid`, `message_id`, `external_request_id`) | `.../OmnichannelCore/`, `services/worker/`, `services/wms-sim/`; evidence in `docs/evidence/qa-3-traceability.md` |
 | António | `[x]` Worker-side structured logs with the same 3 IDs; envelope enforced on inbound + outbound messages | `services/worker/` |
 | Diogu | `[x]` RabbitMQ Management UI exposed in Compose; one-page ops walkthrough and infrastructure smoke captured | `docker-compose.yml`, `docs/setup.md`, `docs/evidence/qa-4-operability.md` |
 | João Roldão + António | `[x]` Cross-pair: align log field names (`order_guid`, `message_id`, `external_request_id`) so QA-3 query works end-to-end | (review only) |
@@ -218,6 +219,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 **Verification gate** (Fri 29 May)
 
 - **QA-3**: pick 10 placed orders; for each, the outbox row, MQ message id, worker attempt log, and fulfillment projection are linkable by `OrderGuid` and `messageId`. Resolution path ≤ 3 admin clicks. Record in `docs/evidence/qa-3-traceability.md`.
+- **Current QA-3 result (2026-06-02)**: complete. Ten placed orders are linked order → outbox → worker/WMS → fulfillment; `TraceableOrderCount = 10`; admin Trace path is ≤ 3 clicks. Worker attempts are resolved by filtering worker logs on `message_id`.
 - **QA-4**: RabbitMQ Management UI + plugin admin view together expose queue depth, retry count, DLQ size, fulfillment-pending count. Refresh latency ≤ 5 s. Record in `docs/evidence/qa-4-operability.md`.
 
 **Risks**
@@ -234,7 +236,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 | Owner | Task | Files / paths |
 |-------|------|---------------|
-| João Varela | `[ ]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
+| João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
 | Diogu | `[~]` Evidence pack: baseline + QA-4 infrastructure captured; QA-1 runtime numbers pending plugin E2E unblock | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
 | João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
@@ -294,8 +296,8 @@ Tick every line before declaring the plan complete.
 - [ ] `docker compose up` from a fresh clone reaches healthy state without manual steps.
 - [ ] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
 - [ ] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
-- [ ] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
-- [ ] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
+- [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
+- [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
 - [ ] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.
 - [ ] **QA-5**: outbox row written ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP calls in checkout trace.
 - [ ] All five demo scenarios runnable from `docker compose up` (normal, WMS unavailable + recovery, POS legitimate, POS duplicate, POS stale).

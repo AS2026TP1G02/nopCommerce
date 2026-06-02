@@ -77,7 +77,7 @@ public static class OmnichannelCoreDefaults
     public static (string Name, string Type, int Period) OutboxPublisherTask =>
         ("Omnichannel outbox publisher",
          "Nop.Plugin.Misc.OmnichannelCore.ScheduleTasks.OutboxPublisherTask, Nop.Plugin.Misc.OmnichannelCore",
-         60);
+         20);
 
     /// <summary>
     /// Gets the outbox reconciler task type and metadata

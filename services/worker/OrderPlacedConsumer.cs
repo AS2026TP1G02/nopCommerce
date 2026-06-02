@@ -94,7 +94,8 @@ public sealed class OrderPlacedConsumer : BackgroundService
 
             var fulfillment = await _wmsClient.RequestFulfillmentAsync(message, CancellationToken.None);
 
-        // If circuit breaker is open (status=pending), wait before requeuing to avoid spam             if (fulfillment.Status == "pending")
+            // If circuit breaker is open (status=pending), wait before requeuing to avoid spam             
+            if (fulfillment.Status == "pending")
             {
                 _logger.LogInformation(
                 "Circuit breaker open, requeuing message after delay order_guid={OrderGuid} message_id={MessageId}", message.Payload.OrderGuid, message.MessageId);

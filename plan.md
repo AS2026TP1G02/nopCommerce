@@ -4,11 +4,14 @@ Per-dev, per-date plan for delivering Part 2 of *Architectural Evolution of nopC
 
 If `plan.md` and `roadmap.md` ever conflict, `roadmap.md` is authoritative for *what* must be delivered; this file is authoritative for *who* delivers it *when*.
 
-> **Status — 2026-06-02 (final build day; demo 2026-06-03).** Both integration PRs are merged to `develop`: **#10** (outbox + real RabbitMQ publish + fulfillment callback + `Trace.cshtml`) and **#11** (Compose + `setup.md` + evidence scaffolding). **Phases 1–5 are code-complete on `develop`.** What remains today is *runtime evidence + polish*, not new features:
-> - **QA-5** (outbox latency) — numbers not yet captured (template).
-> - **QA-2** runtime numbers to finalize; **QA-3** to extend from the POS receive side to the full 10-order order→fulfillment link.
-> - **Phase-1 uninstall DB gate** still unproven.
-> - **Slides** (`docs/part2/`), full **5-scenario dry-run ×2**, and a fresh-clone `docker compose up` smoke.
+> **Status — 2026-06-03 (demo day).** Both integration PRs are merged to `develop`: **#10** (outbox + real RabbitMQ publish + fulfillment callback + `Trace.cshtml`) and **#11** (Compose + `setup.md` + evidence scaffolding). **All phases (1–6) are complete on `develop`.** Every verification gate has passed and every QA scenario has a captured, passing number:
+> - **QA-1** (resilience): degraded checkout P95 = 1843 ms (≤ 2085 ms = 1.5× baseline), backlog drain ≈ 8 s, 0 orders pending > 5 min.
+> - **QA-2** (consistency): duplicate rejected in 17.485 ms, 0 duplicate fulfillment rows, stale `sourceVersion` ignored.
+> - **QA-3** (traceability): 10/10 orders linked order→outbox→worker→fulfillment, ≤ 3 admin clicks.
+> - **QA-4** (operability): queue depth / retry / DLQ visible, pending signal 10 → 0, refresh ≤ 5 s.
+> - **QA-5** (outbox latency): outbox write avg 10.3 ms / max 59 ms, 0 synchronous external HTTP on checkout.
+> - **Phase-1 uninstall DB gate** proven on 2026-06-02 (uninstall drops all four tables + index → DB clean; reinstall + fresh order flows end-to-end).
+> - **Slides** finalised (`docs/part2/presentation.pdf`), **5-scenario dry-run** complete, and the fresh-clone `docker compose up` smoke passed.
 
 ## Calendar
 
@@ -105,12 +108,12 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 
 **Verification gate** (Sun 17 May)
 
-- Plugin install/uninstall round-trip leaves DB clean; the four tables appear with correct columns. **Status (2026-05-14)**: install + tables + admin page confirmed locally (see [evidence](docs/evidence/phase-1-plugin-scaffold.md)); **uninstall DB validation still pending** — phase remains `In review` in `roadmap.md` until that gate passes.
+- Plugin install/uninstall round-trip leaves DB clean; the four tables appear with correct columns. **Status (2026-06-02)**: install + tables + admin page confirmed, and the **uninstall round-trip is proven** (uninstall drops all four tables + index → DB clean; reinstall recreates them and a fresh order flows end-to-end) — see [evidence](docs/evidence/phase-1-plugin-scaffold.md). Gate passed; phase is `Done` in `roadmap.md`.
 - `docker compose up` starts every service with healthcheck green (even if some endpoints return placeholders).
 - `docs/evidence/baseline.md` exists with P50/P95 numbers and the storefront URL used.
 - ADR-0011 exists; ADR-0005 has the demo-token bullet.
 
-**Phase 1 progress (as of 2026-05-14)** — Varela completed the plugin scaffold, four-table migration, and admin shell on `feat/phase-1-omnichannel-plugin-scaffold` (merged). Diogu completed Docker Compose v1 (`docker compose up` starts every service with healthchecks green). **Remaining**: ADR-0011, ADR-0005 demo-token note, POS sim scaffold, worker scaffold + RabbitMQ topology design, WMS sim scaffold, `docs/setup.md` skeleton, baseline measurement, uninstall DB validation.
+**Phase 1 progress (complete)** — Varela completed the plugin scaffold, four-table migration, and admin shell on `feat/phase-1-omnichannel-plugin-scaffold` (merged). Diogu completed Docker Compose v1 (`docker compose up` starts every service with healthchecks green). **All Phase 1 items are done**: ADR-0011, ADR-0005 demo-token note, POS sim scaffold, worker scaffold + RabbitMQ topology design, WMS sim scaffold, `docs/setup.md`, baseline measurement, and the uninstall DB validation are all complete.
 
 **Risks**
 
@@ -134,7 +137,7 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | António | `[x]` Worker consumes `commerce.order.placed.v1`, calls WMS, publishes `fulfillment.status.changed.v1` | `services/worker/` |
 | António | `[x]` Message envelope library finalized (`messageId`, `correlationId`, `eventType`, `occurredOnUtc`) | `services/contracts/Envelope.cs` |
 | Diogu | `[x]` WMS sim `normal` mode: accept fulfillment request, return `externalRequestId` + `accepted` | `services/wms-sim/` |
-| Diogu | `[x]` Docker Compose stitches every service/container end-to-end (plugin publish + fulfillment callback now merged); **E2E run to be re-verified on merged `develop`** | `docker-compose.yml`, `docs/setup.md` |
+| Diogu | `[x]` Docker Compose stitches every service/container end-to-end (plugin publish + fulfillment callback merged); **E2E run verified on merged `develop`** | `docker-compose.yml`, `docs/setup.md` |
 | Diogu | `[x]` `docs/setup.md` filled in for Phase 2 stack | `docs/setup.md` |
 | João Roldão + António | `[x]` Cross-pair pairing session on envelope contract (~half a day) | `services/contracts/` (envelope frozen + documented in ADR-0009) |
 
@@ -243,13 +246,13 @@ Owns the **send-out** side: how messages flow to WMS, how retries/breakers/DLQ b
 | Owner | Task | Files / paths |
 |-------|------|---------------|
 | João Varela | `[x]` Evidence pack: QA-2 + QA-3 (consolidate numbers, screenshots, run logs) | `docs/evidence/qa-2-consistency.md`, `docs/evidence/qa-3-traceability.md` |
-| Diogu | `[~]` Evidence pack: baseline, QA-1, and QA-4 complete; final smoke/slides still open | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
+| Diogu | `[x]` Evidence pack: baseline, QA-1, and QA-4 captured and passing; final smoke + slides complete | `docs/evidence/qa-1-pressure.md`, `docs/evidence/qa-4-operability.md`, `docs/evidence/baseline.md` |
 | João Roldão | `[x]` ADR updates reflecting Part 2 reality (e.g., write-through decision for ADR-0007 after measurement) | `docs/adr/` (ADR-0007 Part-2 outcome; ADR-0009 frozen envelope) |
-| João Roldão | `[ ]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
-| António | `[ ]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
-| Diogu | `[ ]` Demo + measurement slides | (slides repo) |
-| João Varela | `[ ]` Final Compose smoke from a fresh clone | `docker-compose.yml` |
-| All 4 | `[ ]` Full end-to-end dry run of all 5 demo scenarios (normal, WMS unavailable + recovery, POS legitimate update, POS duplicate, POS stale) | (demo scripts) |
+| João Roldão | `[x]` Design slides (target arch, ADRs, iterations) for Part 2 deck | (slides repo / shared deck) |
+| António | `[x]` Worker hardening: clean shutdown, log polish, README finalised | `services/worker/` |
+| Diogu | `[x]` Demo + measurement slides | (slides repo) |
+| João Varela | `[x]` Final Compose smoke from a fresh clone | `docker-compose.yml` |
+| All 4 | `[x]` Full end-to-end dry run of all 5 demo scenarios (normal, WMS unavailable + recovery, POS legitimate update, POS duplicate, POS stale) | (demo scripts) |
 
 **Verification gate** (Sun 31 May)
 
@@ -300,20 +303,20 @@ Phase 3 and Phase 4 share **zero files**: Phase 3 touches `services/worker/` + `
 
 Tick every line before declaring the plan complete.
 
-- [ ] `docker compose up` from a fresh clone reaches healthy state without manual steps.
-- [ ] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
+- [x] `docker compose up` from a fresh clone reaches healthy state without manual steps.
+- [x] Placing an order through the storefront produces an `OmniOrderFulfillment` row in state `accepted` under normal conditions.
 - [x] **QA-1**: WMS-unavailable scenario shows checkout P95 ≤ 1.5× baseline; backlog drains ≤ 60 s after recovery; 0 orders pending > 5 min after recovery.
   Current 2026-06-02 result: pass. P95, broker drain, and pending-order recovery all met target.
 - [x] **QA-2**: duplicate POS event rejected ≤ 50 ms; 0 duplicate fulfillment rows; stale `sourceVersion` ignored.
 - [x] **QA-3**: 10 sample orders link end-to-end via `OrderGuid` in the plugin admin view, resolution ≤ 3 clicks.
 - [x] **QA-4**: queue depth + retry count + DLQ size visible in RabbitMQ Management UI; pending-fulfillment count in plugin admin view; combined refresh ≤ 5 s.
-- [ ] **QA-5**: outbox row written ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP calls in checkout trace.
-- [ ] All five demo scenarios runnable from `docker compose up` (normal, WMS unavailable + recovery, POS legitimate, POS duplicate, POS stale).
-- [ ] `docs/evidence/` populated with numbered measurements for every QA scenario.
-- [ ] `journal.md` has an entry per logical change since Phase 1, each linking to an ADR and/or QA.
-- [ ] ADRs updated to reflect Part 2 reality (notable: ADR-0007 write-through decision after measurement).
-- [ ] `docs/setup.md` is sufficient for a stranger to run the demo.
-- [ ] Part 2 slides drafted (design half + demo half).
+- [x] **QA-5**: outbox row written ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP calls in checkout trace.
+- [x] All five demo scenarios runnable from `docker compose up` (normal, WMS unavailable + recovery, POS legitimate, POS duplicate, POS stale).
+- [x] `docs/evidence/` populated with numbered measurements for every QA scenario.
+- [x] `journal.md` has an entry per logical change since Phase 1, each linking to an ADR and/or QA.
+- [x] ADRs updated to reflect Part 2 reality (notable: ADR-0007 write-through decision after measurement).
+- [x] `docs/setup.md` is sufficient for a stranger to run the demo.
+- [x] Part 2 slides drafted (design half + demo half).
 
 ## June 1–3 plan
 

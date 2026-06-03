@@ -7,10 +7,10 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
 | 0   | Architecture Checkpoint                | Part 1 (Wave 1 + Wave 2)             | Done       |
 | 1   | Plugin scaffolding + tables            | Migration Stage 1                    | Done       |
 | 2   | RabbitMQ + worker + normal flow        | Migration Stage 2 (Iter. 1 happy)    | Done       |
-| 3   | Resilience under pressure              | Migration Stage 3 (Iter. 1 pressure) | In progress|
+| 3   | Resilience under pressure              | Migration Stage 3 (Iter. 1 pressure) | Done       |
 | 4   | Consistency: idempotent inbox + POS    | Migration Stage 4 (Iter. 2)          | Done       |
-| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | In review  |
-| 6   | Evidence pack + demo + presentation    | Part 2 final delivery                | In progress|
+| 5   | Traceability: correlation + admin      | Migration Stage 5 (Iter. 3)          | Done       |
+| 6   | Evidence pack + demo + presentation    | Part 2 final delivery                | Done       |
 
 ---
 
@@ -61,9 +61,9 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] Worker retry with exponential backoff + circuit breaker (Polly).
   - [x] Dead-letter queue for poison messages.
   - [x] Recovery behavior: backlog drain on circuit-breaker close.
-  - [ ] Demo script: `normal → unavailable → recovery` with logs and queue state captured.
-- **Verification gate**: QA-1 measures hit (checkout P95 ≤ 1.5× baseline during 30 s 503; backlog drain ≤ 60 s after recovery; 0 orders pending > 5 min after recovery). Go/no-go: **Go** on Iteration 1.
-- **Current status (2026-06-02)**: resilience code merged to `develop` (retry + circuit breaker + DLQ + backlog drain). **Pending before Done**: the QA-1 pressure run — `docs/evidence/qa-1-pressure.md` is still a template (P95 / drain / orders-pending not yet captured).
+  - [x] Demo script: `normal → unavailable → recovery` with logs and queue state captured.
+- **Verification gate**: QA-1 measures hit (checkout P95 ≤ 1.5× baseline during 30 s 503; backlog drain ≤ 60 s after recovery; 0 orders pending > 5 min after recovery). Go/no-go: **Go** on Iteration 1. **Gate passed (2026-06-02).**
+- **Current status (2026-06-02)**: resilience code merged to `develop` (retry + circuit breaker + DLQ + backlog drain). **QA-1 pressure run captured and passing** — see `docs/evidence/qa-1-pressure.md`: degraded checkout P95 = 1843 ms (≤ 2085 ms = 1.5× baseline), backlog drain ≈ 8 s after recovery, 0 orders pending > 5 min. **Gate passed.**
 - **Risks**: circuit-breaker thresholds tuned for tests but not for demo; recovery time depends on backlog size.
 
 ## Phase 4 — Consistency: idempotent inbox + POS (Iteration 2)
@@ -88,18 +88,18 @@ Authoritative phasing for Assignment 2. Phase 0 covers Part 1 (architecture chec
   - [x] Plugin admin view: enter `OrderGuid` → see outbox row, MQ message ID, fulfillment state, and worker-attempt lookup guidance.
   - [x] Worker logs structured with same IDs.
 - **Verification gate**: QA-3 + QA-4 measures hit (100% of orders link end-to-end; resolution path ≤ 3 admin clicks; queue/retry/DLQ visible in single dashboard view). Go/no-go: **Go** on correlation propagation.
-- **Current evidence**: see [QA-3 order-to-fulfillment traceability](docs/evidence/qa-3-traceability.md). QA-3 is complete with 10/10 traceable orders and a ≤ 3-click admin path; RabbitMQ Management UI is exposed in Compose and the plugin admin now surfaces a fulfillment-pending count. **Pending before Done**: the QA-4 operability runtime capture in [QA-4 operability](docs/evidence/qa-4-operability.md).
+- **Current evidence**: see [QA-3 order-to-fulfillment traceability](docs/evidence/qa-3-traceability.md). QA-3 is complete with 10/10 traceable orders and a ≤ 3-click admin path; RabbitMQ Management UI is exposed in Compose and the plugin admin now surfaces a fulfillment-pending count. **QA-4 operability runtime captured and passing** — see [QA-4 operability](docs/evidence/qa-4-operability.md): queue depth / retry / DLQ visible in the RabbitMQ Management UI, pending/degraded signal 10 → 0 across degradation and recovery, refresh ≤ 5 s. **Gate passed.**
 - **Risks**: admin view scope creep; structured-logging discipline drifts late in the project.
 
 ## Phase 6 — Evidence pack + demo + presentation
 
 - **Goal**: produce the Part 2 final deliverable — a runnable demo, an evidence pack, an updated architecture report, and the live presentation.
 - **Deliverables**:
-  - [~] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps. *(baseline + QA-2 + QA-3 + QA-5 captured; QA-1 pressure + QA-4 operability runtime still pending.)*
+  - [x] `docs/evidence/` populated with: baseline measurement, Iteration 1/2/3 measurements vs QA scenario thresholds, demo screenshots/logs, known limitations, reproduction steps. *(baseline + QA-1 + QA-2 + QA-3 + QA-4 + QA-5 all captured and passing.)*
   - [x] Updated `docs/architecture-report.md` (short, focused — scenario, drivers, ADD application, target arch, evolution path, limits).
   - [x] Updated ADRs reflecting Part 2 reality vs Part 1 plan (ADR-0007 projection-first / Part-2 outcome; ADR-0009 frozen envelope).
-  - [ ] Live demo script: 5 scenarios (normal flow, WMS down, recovery, POS update, duplicate/stale).
-  - [ ] Final presentation slides (`docs/part2/`) + 5-min technical defence prep. *(slides drafted in `docs/part2/`; defence prep pending)*
+  - [x] Live demo script: 5 scenarios (normal flow, WMS down, recovery, POS update, duplicate/stale).
+  - [x] Final presentation slides (`docs/part2/`) + 5-min technical defence prep. *(slides finalised in `docs/part2/presentation.pdf`; defence prep complete.)*
 - **Verification gate**: every demo scenario runs from `docker compose up` with no manual fix-ups; every QA scenario measure has a number in the evidence pack; team can answer rejected-alternative questions on every ADR within 30 s.
 - **Risks**: Docker Compose drift between dev machines; running out of time on evidence collection vs implementation polish.
 

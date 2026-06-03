@@ -24,7 +24,7 @@ Add omnichannel behavior through a plugin and one independently deployable worke
 
 - Future scaling of order/catalog independently is constrained by the monolith's boundaries.
 - The plugin must stay disciplined about not bypassing core services — easy to violate in code review if not enforced.
-- We accept nopCommerce's release cadence for any change that touches core (we don't, by design, but the constraint exists).
+- Any change that touches core would inherit nopCommerce's release cadence; by design the plugin and worker avoid touching core, but the constraint remains.
 
 ## Rejected Alternatives
 

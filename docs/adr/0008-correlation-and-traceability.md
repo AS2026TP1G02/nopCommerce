@@ -29,6 +29,8 @@ Standard message envelope:
 }
 ```
 
+This snippet lists the correlation-relevant fields only; the full frozen wire envelope (adding `source` and the typed `payload`) is defined in ADR-0009 and `services/contracts/Envelope.cs`.
+
 ## Consequences
 
 - Support flow: enter `OrderGuid` → see outbox row, MQ message, worker attempt, projection — in ≤ 3 admin clicks (QA-3 measure).

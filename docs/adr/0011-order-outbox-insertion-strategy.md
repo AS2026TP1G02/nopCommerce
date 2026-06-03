@@ -1,13 +1,12 @@
-# ADR-0011: Order Outbox Insertion Strategy (Consumer + Reconciler)
+# ADR-0011 - Order Outbox Insertion Strategy (Consumer + Reconciler)
 
-- **Status**: Accepted
-- **Date**: 2026-05-15
-- **Deciders**: Team G02
-- **Drivers (QA/Constraint)**: QA-5 (outbox row ≤ 100 ms after OrderPlacedEvent; 0 synchronous external HTTP in checkout), Constraint 1 (async workflow), Constraint 2 (explicit reliability decision: outbox)
+## Status
+
+Accepted.
 
 ## Context
 
-Scenario C requires nopCommerce to notify the warehouse when an order is placed, without calling the WMS synchronously on the checkout thread (that would couple checkout latency and availability to an external system). The standard pattern is the **transactional outbox**: write a durable row in the same unit of work as the business event, then publish it asynchronously.
+Scenario C requires nopCommerce to notify the warehouse when an order is placed, without calling the WMS synchronously on the checkout thread (that would couple checkout latency and availability to an external system) — driven by QA-5 (outbox row ≤ 100 ms after `OrderPlacedEvent`; 0 synchronous external HTTP in checkout) and Constraints 1 (async workflow) and 2 (explicit reliability decision: outbox). The standard pattern is the **transactional outbox**: write a durable row in the same unit of work as the business event, then publish it asynchronously.
 
 nopCommerce raises `OrderPlacedEvent` (`Nop.Services.Orders.OrderPlacedEvent`) after an order is placed. Our plugin consumes it (`OrderPlacedOutboxConsumer`) and inserts an `OmniOutboxMessage`. The risk: nopCommerce's event publisher catches consumer exceptions, so if the consumer throws (or the process crashes) after the order commits but before the outbox row is written, the order would exist with **no integration trail** and the WMS would never hear about it.
 

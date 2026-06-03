@@ -19,7 +19,15 @@ Compact orientation page. Detail lives in the canonical docs.
 - **[docs/part1/architecture-checkpoint.md](docs/part1/architecture-checkpoint.md)** — design intent (3 ADD iterations, framework, target arch, ADR map).
 - **[docs/part1/quality-attribute-scenarios.md](docs/part1/quality-attribute-scenarios.md)** — five QA scenarios with numeric measures.
 - **[docs/architecture.md](docs/architecture.md)** — current-state analysis with source-line citations.
-- **[docs/adr/](docs/adr/)** — 10 ADRs, all Accepted (each with Tradeoffs and Rejected Alternatives); new ADRs use [docs/adr/template.md](docs/adr/template.md).
+- **[docs/adr/](docs/adr/)** — 11 ADRs, all Accepted (each with Tradeoffs and Rejected Alternatives); new ADRs use [docs/adr/template.md](docs/adr/template.md).
+
+## Part 2 deliverables
+
+- **[docs/setup.md](docs/setup.md)** — build & run instructions (`docker compose up`).
+- **[docs/part2/architecture-report.md](docs/part2/architecture-report.md)** — Part 2 architecture report (scenario, drivers, ADD application, target arch, evolution, limits).
+- **[docs/evidence/](docs/evidence/)** — evidence pack: baseline + QA-1…QA-5 measurements.
+- **[demo/README.md](demo/README.md)** — live demo runbook (5 scenarios).
+- **[docs/part2/presentation.pdf](docs/part2/presentation.pdf)** — final presentation slides.
 
 ## Technology stack
 

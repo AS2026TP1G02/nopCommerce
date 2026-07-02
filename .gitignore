@@ -13,3 +13,7 @@ services/**/obj/
 **/App_Data/Logs/
 **/App_Data/DataProtectionKeys/
 **/App_Data/TempUploads/
+
+# Build output (belt-and-suspenders; nopCommerce/ and services/ already scope their own)
+**/bin/
+**/obj/
